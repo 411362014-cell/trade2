@@ -1,0 +1,343 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CCUTrade.MainWindow"
+        Title="中正大學二手交易平台"
+        Width="1100"
+        Height="1000"
+        MinWidth="1100"
+        MinHeight="1000"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="16">
+
+            <TextBlock Text="中正大學二手交易平台"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center" />
+
+            <TextBlock x:Name="NotificationTextBlock"
+                       Text=""
+                       FontSize="16"
+                       FontWeight="Bold"
+                       TextWrapping="Wrap" />
+
+            <!-- 校內帳號認證區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="校內帳號認證"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <TextBlock Text="學生姓名" />
+                    <TextBox x:Name="StudentNameTextBox"
+                             Watermark="例如：王小明" />
+
+                    <TextBlock Text="學校 Email" />
+                    <TextBox x:Name="SchoolEmailTextBox"
+                             Watermark="例如：abc123@ccu.edu.tw" />
+
+                    <Button Content="註冊 / 登入校內帳號"
+                            Click="RegisterOrLoginButton_Click"
+                            HorizontalAlignment="Left" />
+
+                    <TextBlock x:Name="CurrentUserTextBlock"
+                               Text="目前尚未登入校內帳號"
+                               FontWeight="Bold"
+                               TextWrapping="Wrap" />
+
+                </StackPanel>
+            </Border>
+
+            <!-- 新增 / 修改商品區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="新增 / 修改商品"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <TextBlock Text="商品名稱" />
+                    <TextBox x:Name="NameTextBox"
+                             Watermark="例如：計概課本、統計學課本、小冰箱" />
+
+                    <TextBlock Text="商品描述" />
+                    <TextBox x:Name="DescriptionTextBox"
+                             Watermark="例如：九成新，無筆記，可管院面交" />
+
+                    <TextBlock Text="科系" />
+                    <TextBox x:Name="DepartmentTextBox"
+                             Watermark="例如：資管系、財金系、經濟系" />
+
+                    <TextBlock Text="課程名稱" />
+                    <TextBox x:Name="CourseNameTextBox"
+                             Watermark="例如：計算機概論、統計學、經濟學" />
+
+                    <TextBlock Text="商品分類" />
+                    <ListBox x:Name="CategoryListBox"
+                             Height="120"
+                             SelectedIndex="0">
+                        <ListBoxItem Content="課本" />
+                        <ListBoxItem Content="電子產品" />
+                        <ListBoxItem Content="宿舍用品" />
+                        <ListBoxItem Content="交通工具" />
+                        <ListBoxItem Content="票券" />
+                        <ListBoxItem Content="其他" />
+                    </ListBox>
+
+                    <TextBlock Text="校園專區" />
+                    <ListBox x:Name="CampusSectionListBox"
+                             Height="100"
+                             SelectedIndex="0">
+                        <ListBoxItem Content="一般商品" />
+                        <ListBoxItem Content="畢業出清專區" />
+                        <ListBoxItem Content="宿舍用品打包出售" />
+                        <ListBoxItem Content="學長姐推薦好物" />
+                    </ListBox>
+
+                    <TextBlock Text="價格" />
+                    <TextBox x:Name="PriceTextBox"
+                             Watermark="例如：300" />
+
+                    <TextBlock Text="賣家姓名" />
+                    <TextBox x:Name="SellerNameTextBox"
+                             Watermark="例如：王小明" />
+
+                    <TextBlock Text="聯絡方式" />
+                    <TextBox x:Name="ContactInfoTextBox"
+                             Watermark="例如：Line ID、IG、Email" />
+
+                    <TextBlock Text="交易地點" />
+                    <TextBox x:Name="LocationTextBox"
+                             Watermark="例如：管院、宿舍、校門口" />
+
+                    <TextBlock Text="推薦面交地點" />
+                    <ListBox x:Name="RecommendedMeetingLocationListBox"
+                             Height="100"
+                             SelectionChanged="RecommendedMeetingLocationListBox_SelectionChanged">
+                        <ListBoxItem Content="圖書館前" />
+                        <ListBoxItem Content="活動中心" />
+                        <ListBoxItem Content="全家便利超商" />
+                        <ListBoxItem Content="管院門口" />
+                    </ListBox>
+
+                    <TextBlock Text="安全提醒：建議於公開場所面交，避免單獨前往偏僻地點。"
+                               FontWeight="Bold"
+                               TextWrapping="Wrap" />
+
+                    <Button Content="新增商品"
+                            Click="AddProduct_Click"
+                            HorizontalAlignment="Left" />
+
+                </StackPanel>
+            </Border>
+
+            <!-- 願望清單區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="收藏與願望清單"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <TextBlock Text="想買關鍵字" />
+                    <TextBox x:Name="WishlistKeywordTextBox"
+                             Watermark="例如：統計學課本、腳踏車、小冰箱" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+
+                        <Button Content="加入願望清單"
+                                Click="AddWishlistButton_Click" />
+
+                        <Button Content="刪除選取願望"
+                                Click="DeleteWishlistButton_Click" />
+
+                    </StackPanel>
+
+                    <TextBlock Text="我的願望清單" />
+                    <ListBox x:Name="WishlistList"
+                             Height="120" />
+
+                </StackPanel>
+            </Border>
+
+            <!-- 交易評價區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="交易評價系統"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <TextBlock Text="請先在商品清單選取已售出的商品，再填寫評價。" />
+
+                    <TextBlock Text="星等評分" />
+                    <ListBox x:Name="ReviewRatingListBox"
+                             Height="100"
+                             SelectedIndex="0">
+                        <ListBoxItem Content="5" />
+                        <ListBoxItem Content="4" />
+                        <ListBoxItem Content="3" />
+                        <ListBoxItem Content="2" />
+                        <ListBoxItem Content="1" />
+                    </ListBox>
+
+                    <TextBlock Text="交易評語" />
+                    <TextBox x:Name="ReviewCommentTextBox"
+                             Watermark="例如：賣家準時、商品狀況良好、溝通順利" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+
+                        <Button Content="載入選取商品評價"
+                                Click="LoadReviewButton_Click" />
+
+                        <Button Content="儲存交易評價"
+                                Click="SaveReviewButton_Click" />
+
+                    </StackPanel>
+
+                </StackPanel>
+            </Border>
+
+            <!-- 搜尋與篩選區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="智慧分類與快速搜尋"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <TextBlock Text="關鍵字搜尋" />
+                    <TextBox x:Name="SearchTextBox"
+                             Watermark="例如：資管系 計概課本、統計學、宿舍小冰箱"
+                             TextChanged="SearchTextBox_TextChanged" />
+
+                    <TextBlock Text="科系搜尋" />
+                    <TextBox x:Name="DepartmentSearchTextBox"
+                             Watermark="例如：資管系"
+                             TextChanged="DepartmentSearchTextBox_TextChanged" />
+
+                    <TextBlock Text="課程名稱搜尋" />
+                    <TextBox x:Name="CourseSearchTextBox"
+                             Watermark="例如：計算機概論、計概、統計學"
+                             TextChanged="CourseSearchTextBox_TextChanged" />
+
+                    <TextBlock Text="價格區間" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+
+                        <TextBox x:Name="MinPriceTextBox"
+                                 Width="160"
+                                 Watermark="最低價格"
+                                 TextChanged="PriceRangeTextBox_TextChanged" />
+
+                        <TextBox x:Name="MaxPriceTextBox"
+                                 Width="160"
+                                 Watermark="最高價格"
+                                 TextChanged="PriceRangeTextBox_TextChanged" />
+
+                    </StackPanel>
+
+                    <TextBlock Text="篩選商品分類" />
+                    <ListBox x:Name="FilterCategoryListBox"
+                             Height="140"
+                             SelectedIndex="0"
+                             SelectionChanged="FilterCategoryListBox_SelectionChanged">
+                        <ListBoxItem Content="全部" />
+                        <ListBoxItem Content="課本" />
+                        <ListBoxItem Content="電子產品" />
+                        <ListBoxItem Content="宿舍用品" />
+                        <ListBoxItem Content="交通工具" />
+                        <ListBoxItem Content="票券" />
+                        <ListBoxItem Content="其他" />
+                    </ListBox>
+
+                    <TextBlock Text="篩選校園專區" />
+                    <ListBox x:Name="CampusSectionFilterListBox"
+                             Height="120"
+                             SelectedIndex="0"
+                             SelectionChanged="CampusSectionFilterListBox_SelectionChanged">
+                        <ListBoxItem Content="全部" />
+                        <ListBoxItem Content="一般商品" />
+                        <ListBoxItem Content="畢業出清專區" />
+                        <ListBoxItem Content="宿舍用品打包出售" />
+                        <ListBoxItem Content="學長姐推薦好物" />
+                    </ListBox>
+
+                    <TextBlock Text="篩選商品狀態" />
+                    <ListBox x:Name="StatusFilterListBox"
+                             Height="80"
+                             SelectedIndex="0"
+                             SelectionChanged="StatusFilterListBox_SelectionChanged">
+                        <ListBoxItem Content="販售中" />
+                        <ListBoxItem Content="已售出" />
+                        <ListBoxItem Content="全部商品" />
+                    </ListBox>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+
+                        <Button Content="重新整理"
+                                Click="RefreshButton_Click" />
+
+                        <Button Content="清除搜尋條件"
+                                Click="ClearSearchButton_Click" />
+
+                        <Button Content="載入選取商品到表單"
+                                Click="LoadSelectedProductButton_Click" />
+
+                        <Button Content="儲存修改"
+                                Click="UpdateProductButton_Click" />
+
+                        <Button Content="標記選取商品為已售出"
+                                Click="MarkAsSoldButton_Click" />
+
+                        <Button Content="刪除選取商品"
+                                Click="DeleteProductButton_Click" />
+
+                    </StackPanel>
+
+                </StackPanel>
+            </Border>
+
+            <!-- 商品清單區 -->
+            <Border BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+
+                <StackPanel Spacing="12">
+
+                    <TextBlock Text="商品清單"
+                               FontSize="20"
+                               FontWeight="Bold" />
+
+                    <ListBox x:Name="ProductList"
+                             Height="380" />
+
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Window>
