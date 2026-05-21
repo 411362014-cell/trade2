@@ -18,24 +18,66 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        InitializeComponent();
+        // 1. 載入前台 XAML 介面
+        Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
 
-        CategoryListBox.SelectedIndex = 0;
-        CampusSectionListBox.SelectedIndex = 0;
-        FilterCategoryListBox.SelectedIndex = 0;
-        CampusSectionFilterListBox.SelectedIndex = 0;
-        StatusFilterListBox.SelectedIndex = 0;
-        ReviewRatingListBox.SelectedIndex = 0;
+        // 🌟 終極防禦：手動幫後台「全體控制項變數」與前台 XAML 實體精準綁定相認
+        // 這樣能徹底防止任何一個控制項在執行時變成 null 導致閃退！
+        CategoryListBox = this.FindControl<ComboBox>("CategoryListBox");
+        CampusSectionListBox = this.FindControl<ComboBox>("CampusSectionListBox");
+        FilterCategoryListBox = this.FindControl<ComboBox>("FilterCategoryListBox");
+        CampusSectionFilterListBox = this.FindControl<ComboBox>("CampusSectionFilterListBox");
+        StatusFilterListBox = this.FindControl<ComboBox>("StatusFilterListBox");
+        ReviewRatingListBox = this.FindControl<ComboBox>("ReviewRatingListBox");
 
+        ProductList = this.FindControl<ListBox>("ProductList");
+        WishlistList = this.FindControl<ListBox>("WishlistList");
+        RecommendedMeetingLocationListBox = this.FindControl<ListBox>("RecommendedMeetingLocationListBox");
+
+        StudentNameTextBox = this.FindControl<TextBox>("StudentNameTextBox");
+        SchoolEmailTextBox = this.FindControl<TextBox>("SchoolEmailTextBox");
+        NameTextBox = this.FindControl<TextBox>("NameTextBox");
+        DescriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
+        DepartmentTextBox = this.FindControl<TextBox>("DepartmentTextBox");
+        CourseNameTextBox = this.FindControl<TextBox>("CourseNameTextBox");
+        PriceTextBox = this.FindControl<TextBox>("PriceTextBox");
+        SellerNameTextBox = this.FindControl<TextBox>("SellerNameTextBox");
+        ContactInfoTextBox = this.FindControl<TextBox>("ContactInfoTextBox");
+        LocationTextBox = this.FindControl<TextBox>("LocationTextBox");
+        WishlistKeywordTextBox = this.FindControl<TextBox>("WishlistKeywordTextBox");
+        ReviewCommentTextBox = this.FindControl<TextBox>("ReviewCommentTextBox");
+        SearchTextBox = this.FindControl<TextBox>("SearchTextBox");
+        DepartmentSearchTextBox = this.FindControl<TextBox>("DepartmentSearchTextBox");
+        CourseSearchTextBox = this.FindControl<TextBox>("CourseSearchTextBox");
+        MinPriceTextBox = this.FindControl<TextBox>("MinPriceTextBox");
+        MaxPriceTextBox = this.FindControl<TextBox>("MaxPriceTextBox");
+
+        NotificationTextBlock = this.FindControl<TextBlock>("NotificationTextBlock");
+        CurrentUserTextBlock = this.FindControl<TextBlock>("CurrentUserTextBlock");
+        LoginOverlayPage = this.FindControl<Grid>("LoginOverlayPage");
+        MainWebsiteTabControl = this.FindControl<TabControl>("MainWebsiteTabControl");
+
+        // 2. 確定都安全相認後，設定下拉選單預設選取項目
+        if (CategoryListBox != null) CategoryListBox.SelectedIndex = 0;
+        if (CampusSectionListBox != null) CampusSectionListBox.SelectedIndex = 0;
+        if (FilterCategoryListBox != null) FilterCategoryListBox.SelectedIndex = 0;
+        if (CampusSectionFilterListBox != null) CampusSectionFilterListBox.SelectedIndex = 0;
+        if (StatusFilterListBox != null) StatusFilterListBox.SelectedIndex = 0;
+        if (ReviewRatingListBox != null) ReviewRatingListBox.SelectedIndex = 0;
+
+        // 3. 初始化並確保 SQLite 資料庫建置完成
         using var db = new AppDbContext();
         db.Database.EnsureCreated();
 
+        // 4. 刷新大廳與願望清單
         RefreshProducts();
         RefreshWishlist();
     }
 
     private void RegisterOrLoginButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (StudentNameTextBox == null || SchoolEmailTextBox == null || NotificationTextBlock == null || CurrentUserTextBlock == null || LoginOverlayPage == null) return;
+
         var studentName = StudentNameTextBox.Text?.Trim() ?? "";
         var schoolEmail = SchoolEmailTextBox.Text?.Trim() ?? "";
 
@@ -84,6 +126,9 @@ public partial class MainWindow : Window
 
         CurrentUserTextBlock.Text = $"目前登入帳號：{_currentUserName}（{_currentUserEmail}）";
         NotificationTextBlock.Text = $"已完成校內帳號認證：{_currentUserName}（{_currentUserEmail}）";
+
+        // 認證成功後，前台的 Gmail 登入鎖定畫面立刻自動蒸發隱藏！
+        LoginOverlayPage.IsVisible = false;
     }
 
     private bool IsSchoolEmailValid(string email)
@@ -94,6 +139,9 @@ public partial class MainWindow : Window
 
     private void AddProduct_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null || NameTextBox == null || DescriptionTextBox == null || DepartmentTextBox == null ||
+            CourseNameTextBox == null || PriceTextBox == null || SellerNameTextBox == null || ContactInfoTextBox == null || LocationTextBox == null) return;
+
         if (string.IsNullOrWhiteSpace(_currentUserEmail))
         {
             NotificationTextBlock.Text = "請先完成校內帳號認證，才能新增商品";
@@ -183,6 +231,7 @@ public partial class MainWindow : Window
 
     private void RecommendedMeetingLocationListBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (LocationTextBox == null || NotificationTextBlock == null) return;
         var location = GetListBoxText(RecommendedMeetingLocationListBox, "");
 
         if (!string.IsNullOrWhiteSpace(location))
@@ -194,6 +243,7 @@ public partial class MainWindow : Window
 
     private void AddWishlistButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (WishlistKeywordTextBox == null || NotificationTextBlock == null) return;
         var keyword = WishlistKeywordTextBox.Text?.Trim() ?? "";
 
         if (string.IsNullOrWhiteSpace(keyword))
@@ -229,6 +279,7 @@ public partial class MainWindow : Window
 
     private void DeleteWishlistButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (WishlistList == null || NotificationTextBlock == null) return;
         var selectedIndex = WishlistList.SelectedIndex;
 
         if (selectedIndex < 0 || selectedIndex >= _currentWishlistItems.Count)
@@ -296,11 +347,15 @@ public partial class MainWindow : Window
     {
         RefreshProducts();
         RefreshWishlist();
-        NotificationTextBlock.Text = "已重新整理";
+        if (NotificationTextBlock != null) NotificationTextBlock.Text = "已重新整理";
     }
 
     private void ClearSearchButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (SearchTextBox == null || DepartmentSearchTextBox == null || CourseSearchTextBox == null ||
+            MinPriceTextBox == null || MaxPriceTextBox == null || FilterCategoryListBox == null ||
+            CampusSectionFilterListBox == null || StatusFilterListBox == null || NotificationTextBlock == null) return;
+
         SearchTextBox.Text = "";
         DepartmentSearchTextBox.Text = "";
         CourseSearchTextBox.Text = "";
@@ -311,12 +366,14 @@ public partial class MainWindow : Window
         StatusFilterListBox.SelectedIndex = 0;
 
         RefreshProducts();
-
         NotificationTextBlock.Text = "已清除搜尋條件";
     }
 
     private void LoadSelectedProductButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null || NameTextBox == null || DescriptionTextBox == null || DepartmentTextBox == null ||
+            CourseNameTextBox == null || PriceTextBox == null || SellerNameTextBox == null || ContactInfoTextBox == null || LocationTextBox == null) return;
+
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -342,6 +399,9 @@ public partial class MainWindow : Window
 
     private void UpdateProductButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null || NameTextBox == null || DescriptionTextBox == null || DepartmentTextBox == null ||
+            CourseNameTextBox == null || PriceTextBox == null || SellerNameTextBox == null || ContactInfoTextBox == null || LocationTextBox == null) return;
+
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -428,7 +488,6 @@ public partial class MainWindow : Window
         db.SaveChanges();
 
         ClearInputFields();
-
         RefreshProducts();
 
         NotificationTextBlock.Text = $"已儲存修改：{product.Name}";
@@ -436,6 +495,7 @@ public partial class MainWindow : Window
 
     private void MarkAsSoldButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null) return;
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -464,6 +524,7 @@ public partial class MainWindow : Window
 
     private void LoadReviewButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null || ReviewCommentTextBox == null) return;
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -486,7 +547,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            ReviewRatingListBox.SelectedIndex = 0;
+            if (ReviewRatingListBox is ComboBox combo) combo.SelectedIndex = 0;
             ReviewCommentTextBox.Text = "";
             NotificationTextBlock.Text = $"此商品尚未評價：{selectedProduct.Name}";
         }
@@ -494,6 +555,7 @@ public partial class MainWindow : Window
 
     private void SaveReviewButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null || ReviewCommentTextBox == null) return;
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -540,7 +602,7 @@ public partial class MainWindow : Window
 
         db.SaveChanges();
 
-        ReviewRatingListBox.SelectedIndex = 0;
+        if (ReviewRatingListBox is ComboBox combo) combo.SelectedIndex = 0;
         ReviewCommentTextBox.Text = "";
 
         RefreshProducts();
@@ -550,6 +612,7 @@ public partial class MainWindow : Window
 
     private void DeleteProductButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (NotificationTextBlock == null) return;
         var selectedProduct = GetSelectedProduct();
 
         if (selectedProduct == null)
@@ -578,6 +641,7 @@ public partial class MainWindow : Window
 
     private Product? GetSelectedProduct()
     {
+        if (ProductList == null) return null;
         var selectedIndex = ProductList.SelectedIndex;
 
         if (selectedIndex < 0 || selectedIndex >= _currentProducts.Count)
@@ -588,58 +652,70 @@ public partial class MainWindow : Window
         return _currentProducts[selectedIndex];
     }
 
-    private string GetListBoxText(ListBox listBox, string defaultValue)
+    private string GetListBoxText(Control? listBoxOrComboBox, string defaultValue)
     {
-        if (listBox.SelectedItem is ListBoxItem item)
+        if (listBoxOrComboBox == null) return defaultValue;
+        if (listBoxOrComboBox is ListBox listBox && listBox.SelectedItem is ListBoxItem listItem)
         {
-            return item.Content?.ToString() ?? defaultValue;
+            return listItem.Content?.ToString() ?? defaultValue;
+        }
+        else if (listBoxOrComboBox is ComboBox comboBox && comboBox.SelectedItem is ListBoxItem comboItem)
+        {
+            return comboItem.Content?.ToString() ?? defaultValue;
         }
 
         return defaultValue;
     }
 
-    private void SetListBoxSelectedItem(ListBox listBox, string value)
+    private void SetListBoxSelectedItem(Control? listBoxOrComboBox, string value)
     {
-        for (int i = 0; i < listBox.ItemCount; i++)
+        if (listBoxOrComboBox == null) return;
+        if (listBoxOrComboBox is ListBox listBox)
         {
-            var item = listBox.Items[i] as ListBoxItem;
-
-            if (item?.Content?.ToString() == value)
+            for (int i = 0; i < listBox.ItemCount; i++)
             {
-                listBox.SelectedIndex = i;
-                return;
+                if (listBox.Items[i] is ListBoxItem item && item.Content?.ToString() == value)
+                {
+                    listBox.SelectedIndex = i;
+                    return;
+                }
             }
+            listBox.SelectedIndex = 0;
         }
-
-        listBox.SelectedIndex = 0;
+        else if (listBoxOrComboBox is ComboBox comboBox)
+        {
+            for (int i = 0; i < comboBox.ItemCount; i++)
+            {
+                if (comboBox.Items[i] is ListBoxItem item && item.Content?.ToString() == value)
+                {
+                    comboBox.SelectedIndex = i;
+                    return;
+                }
+            }
+            comboBox.SelectedIndex = 0;
+        }
     }
 
     private void ClearInputFields()
     {
-        NameTextBox.Text = "";
-        DescriptionTextBox.Text = "";
-        DepartmentTextBox.Text = "";
-        CourseNameTextBox.Text = "";
-        PriceTextBox.Text = "";
-        SellerNameTextBox.Text = "";
-        ContactInfoTextBox.Text = "";
-        LocationTextBox.Text = "";
-        CategoryListBox.SelectedIndex = 0;
-        CampusSectionListBox.SelectedIndex = 0;
-        RecommendedMeetingLocationListBox.SelectedIndex = -1;
+        if (NameTextBox != null) NameTextBox.Text = "";
+        if (DescriptionTextBox != null) DescriptionTextBox.Text = "";
+        if (DepartmentTextBox != null) DepartmentTextBox.Text = "";
+        if (CourseNameTextBox != null) CourseNameTextBox.Text = "";
+        if (PriceTextBox != null) PriceTextBox.Text = "";
+        if (SellerNameTextBox != null) SellerNameTextBox.Text = "";
+        if (ContactInfoTextBox != null) ContactInfoTextBox.Text = "";
+        if (LocationTextBox != null) LocationTextBox.Text = "";
+        if (CategoryListBox is ComboBox c1) c1.SelectedIndex = 0;
+        if (CampusSectionListBox is ComboBox c2) c2.SelectedIndex = 0;
+        if (RecommendedMeetingLocationListBox != null) RecommendedMeetingLocationListBox.SelectedIndex = -1;
     }
 
     private void RefreshProducts()
     {
-        if (SearchTextBox == null ||
-            ProductList == null ||
-            FilterCategoryListBox == null ||
-            CampusSectionFilterListBox == null ||
-            StatusFilterListBox == null ||
-            DepartmentSearchTextBox == null ||
-            CourseSearchTextBox == null ||
-            MinPriceTextBox == null ||
-            MaxPriceTextBox == null)
+        if (SearchTextBox == null || ProductList == null || FilterCategoryListBox == null ||
+            CampusSectionFilterListBox == null || StatusFilterListBox == null || DepartmentSearchTextBox == null ||
+            CourseSearchTextBox == null || MinPriceTextBox == null || MaxPriceTextBox == null)
         {
             return;
         }
@@ -709,7 +785,7 @@ public partial class MainWindow : Window
 
                 query = query.Where(p =>
                     p.Name.Contains(searchWord) ||
-                    p.Description.Contains(searchWord) ||
+                    (p.Description != null && p.Description.Contains(searchWord)) ||
                     p.Department.Contains(searchWord) ||
                     p.CourseName.Contains(searchWord) ||
                     p.Category.Contains(searchWord) ||
@@ -718,7 +794,7 @@ public partial class MainWindow : Window
                     p.Location.Contains(searchWord) ||
                     p.CampusSection.Contains(searchWord) ||
                     p.VerifiedSchoolEmail.Contains(searchWord) ||
-                    p.ReviewComment.Contains(searchWord));
+                    (p.ReviewComment != null && p.ReviewComment.Contains(searchWord)));
             }
         }
 
@@ -755,6 +831,7 @@ public partial class MainWindow : Window
 
     private void RefreshWishlist()
     {
+        if (WishlistList == null) return;
         using var db = new AppDbContext();
 
         _currentWishlistItems = db.WishlistItems
@@ -775,6 +852,7 @@ public partial class MainWindow : Window
 
     private void CheckWishlistNotification(Product product)
     {
+        if (NotificationTextBlock == null) return;
         using var db = new AppDbContext();
 
         var wishlistItems = db.WishlistItems.ToList();
@@ -782,7 +860,7 @@ public partial class MainWindow : Window
         var matchedItems = wishlistItems
             .Where(w =>
                 product.Name.Contains(w.Keyword) ||
-                product.Description.Contains(w.Keyword) ||
+                (product.Description != null && product.Description.Contains(w.Keyword)) ||
                 product.Department.Contains(w.Keyword) ||
                 product.CourseName.Contains(w.Keyword) ||
                 product.Category.Contains(w.Keyword) ||
@@ -797,6 +875,24 @@ public partial class MainWindow : Window
         else
         {
             NotificationTextBlock.Text = $"已新增商品：{product.Name}";
+        }
+    }
+
+    private void OnGoToHomePage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (MainWebsiteTabControl != null && NotificationTextBlock != null)
+        {
+            MainWebsiteTabControl.SelectedIndex = 0;
+            NotificationTextBlock.Text = "已切換至：校園大廳（智慧搜尋與快速篩選）";
+        }
+    }
+
+    private void OnGoToSellerPage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (MainWebsiteTabControl != null && NotificationTextBlock != null)
+        {
+            MainWebsiteTabControl.SelectedIndex = 1;
+            NotificationTextBlock.Text = "已切換至：智慧賣家管理中心（商品上架、有效期限與隱藏評價系統）";
         }
     }
 }
