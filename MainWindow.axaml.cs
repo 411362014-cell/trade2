@@ -57,7 +57,7 @@ public partial class MainWindow : Window
         LoginOverlayPage = this.FindControl<Grid>("LoginOverlayPage");
         MainWebsiteTabControl = this.FindControl<TabControl>("MainWebsiteTabControl");
 
-        // 2. 確定都安全相認後，設定下拉選單預設選取項目
+        
         if (CategoryListBox != null) CategoryListBox.SelectedIndex = 0;
         if (CampusSectionListBox != null) CampusSectionListBox.SelectedIndex = 0;
         if (FilterCategoryListBox != null) FilterCategoryListBox.SelectedIndex = 0;
@@ -65,11 +65,11 @@ public partial class MainWindow : Window
         if (StatusFilterListBox != null) StatusFilterListBox.SelectedIndex = 0;
         if (ReviewRatingListBox != null) ReviewRatingListBox.SelectedIndex = 0;
 
-        // 3. 初始化並確保 SQLite 資料庫建置完成
+       
         using var db = new AppDbContext();
         db.Database.EnsureCreated();
 
-        // 4. 刷新大廳與願望清單
+       
         RefreshProducts();
         RefreshWishlist();
     }
@@ -127,7 +127,7 @@ public partial class MainWindow : Window
         CurrentUserTextBlock.Text = $"目前登入帳號：{_currentUserName}（{_currentUserEmail}）";
         NotificationTextBlock.Text = $"已完成校內帳號認證：{_currentUserName}（{_currentUserEmail}）";
 
-        // 認證成功後，前台的 Gmail 登入鎖定畫面立刻自動蒸發隱藏！
+        
         LoginOverlayPage.IsVisible = false;
     }
 
