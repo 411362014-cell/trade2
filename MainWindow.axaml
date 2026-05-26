@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:CCUTrade"
         x:Class="CCUTrade.MainWindow"
-        Width="1150" Height="850"
+        Width="1200" Height="880"
         Title="CCUTrade - 中正二手校園交易平台"
         Background="#F5F7FA">
 
@@ -15,7 +15,10 @@
 				</StackPanel>
 
 				<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-					<Button x:Name="NotificationBellButton" Content="🔔 通知小鈴鐺" Background="#E67E22" Foreground="White" FontWeight="Bold" Padding="10,4" Click="NotificationBellButton_Click"/>
+					<Panel>
+						<Button x:Name="NotificationBellButton" Content="🔔 通知小鈴鐺" Background="#E67E22" Foreground="White" FontWeight="Bold" Padding="10,4" Click="NotificationBellButton_Click"/>
+						<Ellipse x:Name="NewNotificationDot" Width="10" Height="10" Fill="Red" Margin="0,-5,-5,0" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="False"/>
+					</Panel>
 					<Button x:Name="CloseBellPanelButton" Content="❌ 關閉通知艙" Background="#7F8C8D" Foreground="White" Padding="8,4" IsVisible="False" Click="CloseBellPanelButton_Click"/>
 				</StackPanel>
 			</Grid>
@@ -46,6 +49,33 @@
 				</Border>
 			</Grid>
 
+			<Grid x:Name="SellerReviewOverlayPage" Background="#80000000" ZIndex="98" IsVisible="False">
+				<Border Background="White" Width="500" Height="450" CornerRadius="12" BoxShadow="0 10 30 0 #55000000" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="25">
+					<Grid RowDefinitions="Auto, *, Auto">
+						<StackPanel Grid.Row="0" Spacing="5" Margin="0,0,0,15">
+							<TextBlock x:Name="SellerReviewTitleTextBlock" Text="👤 歷史信用評價紀錄" FontSize="20" FontWeight="Black" Foreground="#2C3E50"/>
+							<Separator/>
+						</StackPanel>
+						<ListBox x:Name="SellerReviewHistoryListBox" Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="10" Margin="0,0,0,5">
+										<StackPanel Spacing="5">
+											<Grid ColumnDefinitions="*, Auto">
+												<TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Bold" Foreground="#2D3748" FontSize="14"/>
+												<TextBlock Grid.Column="1" Text="{Binding ReviewRatingText}" FontWeight="Bold" Foreground="#F59F00"/>
+											</Grid>
+											<TextBlock Text="{Binding ReviewComment}" Foreground="#4A5568" FontSize="13" TextWrapping="Wrap"/>
+										</StackPanel>
+									</Border>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<Button Grid.Row="2" Content="關閉評價視窗" Click="CloseSellerReviewOverlay_Click" Background="#E2E8F0" Foreground="#4A5568" Height="40" CornerRadius="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontWeight="Bold" Margin="0,15,0,0"/>
+					</Grid>
+				</Border>
+			</Grid>
+
 			<Grid ColumnDefinitions="Auto, *">
 
 				<Border Grid.Column="0" Background="#2C3E50" Width="220" x:Name="SideMenuPanel">
@@ -63,7 +93,8 @@
 						<StackPanel Grid.Row="1" Spacing="5" Margin="10,0">
 							<Button Content="🏠 校園首頁大廳" Background="Transparent" Foreground="White" HorizontalAlignment="Stretch" Padding="15,12" HorizontalContentAlignment="Left" Click="OnGoToHomePage_Click"/>
 							<Button Content="🎓 畢業傳承專區" Background="Transparent" Foreground="White" HorizontalAlignment="Stretch" Padding="15,12" HorizontalContentAlignment="Left" Click="OnGoToGraduationPage_Click"/>
-							<Button Content="🎒 智慧賣家管理中心" Background="Transparent" Foreground="White" HorizontalAlignment="Stretch" Padding="15,12" HorizontalContentAlignment="Left" Click="OnGoToSellerPage_Click"/>
+							<Button Content="🔍 買家徵物需求牆" Background="Transparent" Foreground="White" HorizontalAlignment="Stretch" Padding="15,12" HorizontalContentAlignment="Left" Click="OnGoToBuyerWishPage_Click"/>
+							<Button Content="🎒 智慧賣買家管理中心" Background="Transparent" Foreground="White" HorizontalAlignment="Stretch" Padding="15,12" HorizontalContentAlignment="Left" Click="OnGoToSellerPage_Click"/>
 						</StackPanel>
 
 						<Border Grid.Row="2" Background="#34495E" Margin="10" Padding="10" CornerRadius="6">
@@ -89,12 +120,12 @@
 									<StackPanel Spacing="10">
 										<TextBlock Text="🔍 智慧關鍵字與多條件快速篩選" FontSize="16" FontWeight="Bold" Foreground="#2C3E50"/>
 										<Grid ColumnDefinitions="*, 10, Auto, 10, Auto" RowDefinitions="Auto, 10, Auto" Margin="0,5,0,0">
-											<TextBox Grid.Column="0" Grid.Row="0" x:Name="SearchTextBox" Watermark="輸入任何關鍵字自動智慧匹配..." TextChanged="SearchTextBox_TextChanged" Height="40" VerticalContentAlignment="Center"/>
-											<Button Grid.Column="2" Grid.Row="0" Content="重新整理" Click="RefreshButton_Click" Background="#27AE60" Foreground="White" Width="90" Height="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+											<TextBox Grid.Column="0" Grid.Row="0" x:Name="SearchTextBox" Watermark="輸入任何關鍵字，點擊搜尋按鈕開始匹配..." Height="40" VerticalContentAlignment="Center"/>
+											<Button Grid.Column="2" Grid.Row="0" Content="🔍 開始搜尋" Click="SearchButton_Click" Background="#2980B9" Foreground="White" Width="100" Height="40" FontWeight="Bold" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
 											<Button Grid.Column="4" Grid.Row="0" Content="清除條件" Click="ClearSearchButton_Click" Background="#7F8C8D" Foreground="White" Width="90" Height="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
 
 											<StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="10">
-												<ComboBox x:Name="FilterCategoryListBox" Width="130" SelectionChanged="FilterCategoryListBox_SelectionChanged">
+												<ComboBox x:Name="FilterCategoryListBox" Width="130">
 													<ListBoxItem Content="全部"/>
 													<ListBoxItem Content="課本"/>
 													<ListBoxItem Content="宿舍用品"/>
@@ -102,20 +133,21 @@
 													<ListBoxItem Content="電子產品"/>
 													<ListBoxItem Content="其他"/>
 												</ComboBox>
-												<ComboBox x:Name="CampusSectionFilterListBox" Width="140" SelectionChanged="CampusSectionFilterListBox_SelectionChanged">
+												<ComboBox x:Name="CampusSectionFilterListBox" Width="140">
 													<ListBoxItem Content="全部"/>
 													<ListBoxItem Content="一般商品"/>
 													<ListBoxItem Content="畢業傳承商品"/>
 												</ComboBox>
-												<ComboBox x:Name="StatusFilterListBox" Width="110" SelectionChanged="StatusFilterListBox_SelectionChanged">
+												<ComboBox x:Name="StatusFilterListBox" Width="110">
 													<ListBoxItem Content="販售中"/>
 													<ListBoxItem Content="已售出"/>
+													<ListBoxItem Content="全部"/>
 												</ComboBox>
-												<TextBox x:Name="DepartmentSearchTextBox" Watermark="篩選科系" Width="110" TextChanged="DepartmentSearchTextBox_TextChanged"/>
-												<TextBox x:Name="CourseSearchTextBox" Watermark="篩選課程" Width="110" TextChanged="CourseSearchTextBox_TextChanged"/>
-												<TextBox x:Name="MinPriceTextBox" Watermark="最低$" Width="80" TextChanged="PriceRangeTextBox_TextChanged"/>
+												<TextBox x:Name="DepartmentSearchTextBox" Watermark="篩選科系" Width="110"/>
+												<TextBox x:Name="CourseSearchTextBox" Watermark="篩選課程" Width="110"/>
+												<TextBox x:Name="MinPriceTextBox" Watermark="最低$" Width="80"/>
 												<TextBlock Text="~" VerticalAlignment="Center"/>
-												<TextBox x:Name="MaxPriceTextBox" Watermark="最高$" Width="80" TextChanged="PriceRangeTextBox_TextChanged"/>
+												<TextBox x:Name="MaxPriceTextBox" Watermark="最高$" Width="80"/>
 											</StackPanel>
 										</Grid>
 									</StackPanel>
@@ -130,7 +162,7 @@
 													<ListBox.ItemTemplate>
 														<DataTemplate>
 															<Border Background="White" Margin="0,0,0,12" Padding="20" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" BoxShadow="0 2 8 0 #08000000">
-																<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto" ColumnDefinitions="*, Auto">
+																<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" ColumnDefinitions="*, Auto">
 																	<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
 																		<Border Background="#34495E" CornerRadius="4" Padding="8,4">
 																			<TextBlock Text="{Binding CampusSection}" FontSize="12" FontWeight="Bold" Foreground="White"/>
@@ -157,11 +189,11 @@
 																	</Border>
 																	<StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="20" Margin="0,0,0,8">
 																		<StackPanel Orientation="Horizontal" Spacing="4">
-																			<TextBlock Text="👤 賣家姓名：" FontSize="13" Foreground="#718096"/>
-																			<TextBlock Text="{Binding SellerName}" FontSize="13" FontWeight="Bold" Foreground="#2D3748"/>
-																			<TextBlock Text=" (" FontSize="13" Foreground="#718096"/>
-																			<TextBlock Text="{Binding Department}" FontSize="13" Foreground="#2D3748"/>
-																			<TextBlock Text=")" FontSize="13" Foreground="#718096"/>
+																			<TextBlock Text="👤 賣家姓名：" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+																			<Button Content="{Binding SellerName}" Click="ViewSellerReviews_Click" CommandParameter="{Binding VerifiedSchoolEmail}" Background="Transparent" Foreground="#2980B9" FontWeight="Bold" FontSize="13" Padding="2,0" Cursor="Hand"/>
+																			<TextBlock Text=" (" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+																			<TextBlock Text="{Binding Department}" FontSize="13" Foreground="#2D3748" VerticalAlignment="Center"/>
+																			<TextBlock Text=")" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
 																		</StackPanel>
 																		<StackPanel Orientation="Horizontal" Spacing="4">
 																			<TextBlock Text="🎓 對應課程：" FontSize="13" Foreground="#718096"/>
@@ -180,6 +212,28 @@
 																			<TextBlock Text="{Binding Location}" FontSize="13" FontWeight="Bold" Foreground="#C53030"/>
 																		</StackPanel>
 																	</Grid>
+
+																	<Grid Grid.Row="5" Grid.ColumnSpan="2" RowDefinitions="Auto, Auto" Margin="0,10,0,0">
+																		<Button Grid.Row="0" Content="💬 點我展開/收起即時留言區" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#EDF2F7" Foreground="#2B6CB0" FontSize="12" HorizontalAlignment="Left" Padding="8,4"/>
+																		<Border Grid.Row="1" Background="#F7FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,5,0,0" IsVisible="{Binding IsCommentVisible}">
+																			<StackPanel Spacing="6">
+																				<TextBlock Text="💬 即時問答對話艙：" FontSize="12" FontWeight="Bold" Foreground="#4A5568"/>
+																				<ItemsControl ItemsSource="{Binding Comments}">
+																					<ItemsControl.ItemTemplate>
+																						<DataTemplate>
+																							<TextBlock Text="{Binding}" FontSize="13" Foreground="#2D3748" Margin="5,2" TextWrapping="Wrap"/>
+																						</DataTemplate>
+																					</ItemsControl.ItemTemplate>
+																				</ItemsControl>
+																				<Grid ColumnDefinitions="*, 8, Auto, 8, Auto" Margin="0,4,0,0">
+																					<TextBox Grid.Column="0" Tag="{Binding}" Watermark="輸入校內提問或殺價對話..." FontSize="12" Height="30" VerticalContentAlignment="Center"/>
+																					<Button Grid.Column="2" Content="🚀 送出" Click="SubmitComment_Click" Background="#2B6CB0" Foreground="White" FontSize="11" Padding="10,4"/>
+																					<Button Grid.Column="4" Content="❌ 收起留言" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#718096" Foreground="White" FontSize="11" Padding="10,4"/>
+																				</Grid>
+																			</StackPanel>
+																		</Border>
+																	</Grid>
+
 																</Grid>
 															</Border>
 														</DataTemplate>
@@ -229,7 +283,7 @@
 										</StackPanel>
 									</Border>
 								</Border>
-								<ListBox Grid.Row="1" x:Name="GraduationProductList" Background="Transparent" BorderThickness="0">
+								<ListBox x:Name="GraduationProductList" Grid.Row="1" Background="Transparent" BorderThickness="0">
 									<ListBox.ItemTemplate>
 										<DataTemplate>
 											<Border Background="White" Margin="0,0,0,12" Padding="20" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" BoxShadow="0 2 8 0 #08000000">
@@ -259,8 +313,8 @@
 													</Border>
 													<StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="20" Margin="0,0,0,8">
 														<StackPanel Orientation="Horizontal" Spacing="4">
-															<TextBlock Text="👤 賣家姓名：" FontSize="13" Foreground="#718096"/>
-															<TextBlock Text="{Binding SellerName}" FontSize="13" FontWeight="Bold" Foreground="#4A00E0" VerticalAlignment="Center"/>
+															<TextBlock Text="👤 賣家姓名：" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+															<Button Content="{Binding SellerName}" Click="ViewSellerReviews_Click" CommandParameter="{Binding VerifiedSchoolEmail}" Background="Transparent" Foreground="#4A00E0" FontWeight="Bold" FontSize="13" Padding="2,0" Cursor="Hand"/>
 														</StackPanel>
 													</StackPanel>
 													<Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*, *">
@@ -282,77 +336,238 @@
 						</TabItem>
 
 						<TabItem>
-							<ScrollViewer>
-								<Grid ColumnDefinitions="2*, 15, 1*" RowDefinitions="Auto, 15, Auto" Margin="5">
-
-									<Border Grid.Column="0" Grid.Row="0" Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
-										<StackPanel Spacing="12">
-											<TextBlock Text="🎒 智慧商品管理與上架系統" FontSize="18" FontWeight="Bold" Foreground="#2C3E50"/>
-											<Separator/>
-											<Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto, 15, Auto, 15, Auto, 15, Auto, 15, Auto">
-												<StackPanel Grid.Column="0" Grid.Row="0" Spacing="5">
-													<TextBlock Text="商品名稱 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="NameTextBox" Watermark="例如: 大四二手原文書"/>
-												</StackPanel>
-												<StackPanel Grid.Column="2" Grid.Row="0" Spacing="5">
-													<TextBlock Text="價格 ($) *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="PriceTextBox" Watermark="請輸入數字"/>
-												</StackPanel>
-												<StackPanel Grid.Column="0" Grid.Row="2" Spacing="5">
-													<TextBlock Text="二手分類 *" FontSize="13" FontWeight="Bold"/>
-													<ComboBox x:Name="CategoryListBox" HorizontalAlignment="Stretch">
-														<ListBoxItem Content="課本"/>
-														<ListBoxItem Content="宿舍用品"/>
-														<ListBoxItem Content="腳踏車"/>
-														<ListBoxItem Content="電子產品"/>
-														<ListBoxItem Content="其他"/>
-													</ComboBox>
-												</StackPanel>
-												<StackPanel Grid.Column="2" Grid.Row="2" Spacing="5">
-													<TextBlock Text="校園市集分區 *" FontSize="13" FontWeight="Bold"/>
-													<ComboBox x:Name="CampusSectionListBox" HorizontalAlignment="Stretch">
-														<ListBoxItem Content="一般商品"/>
-														<ListBoxItem Content="畢業傳承商品"/>
-													</ComboBox>
-												</StackPanel>
-												<StackPanel Grid.Column="0" Grid.Row="4" Spacing="5">
-													<TextBlock Text="賣家科系 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="DepartmentTextBox" Watermark="例如: 資管系"/>
-												</StackPanel>
-												<StackPanel Grid.Column="2" Grid.Row="4" Spacing="5">
-													<TextBlock Text="對應課程名稱 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="CourseNameTextBox" Watermark="例如: 管理學"/>
-												</StackPanel>
-												<StackPanel Grid.Column="0" Grid.Row="6" Spacing="5">
-													<TextBlock Text="賣家姓名 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="SellerNameTextBox" Watermark="請輸入姓名"/>
-												</StackPanel>
-												<StackPanel Grid.Column="2" Grid.Row="6" Spacing="5">
-													<TextBlock Text="聯絡方式 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="ContactInfoTextBox" Watermark="手機、LINE 或 FB"/>
-												</StackPanel>
-												<StackPanel Grid.Column="0" Grid.Row="8" Grid.ColumnSpan="3" Spacing="5">
-													<TextBlock Text="指定交易面交地點 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="LocationTextBox" Watermark="請輸入或選取面交地點"/>
-												</StackPanel>
-											</Grid>
-											<StackPanel Spacing="5" Margin="0,5,0,0">
-												<TextBlock Text="商品詳細描述" FontSize="13" FontWeight="Bold"/>
-												<TextBox x:Name="DescriptionTextBox" Watermark="描述新舊狀況..." Height="70" AcceptsReturn="True" TextWrapping="Wrap"/>
-											</StackPanel>
-											<StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-												<Button Content="❌ 刪除選定商品" Click="DeleteProductButton_Click" Background="#C0392B" Foreground="White" Padding="15,10" FontWeight="Bold"/>
-												<Button Content="💾 儲存修改" Click="UpdateProductButton_Click" Background="#F39C12" Foreground="White" Padding="15,10" FontWeight="Bold"/>
-												<Button Content="🚀 確認發布商品" Click="AddProduct_Click" Background="#27AE60" Foreground="White" Padding="25,10" FontWeight="Bold"/>
-											</StackPanel>
+							<Grid RowDefinitions="Auto, *">
+								<Border Grid.Row="0" CornerRadius="8" Margin="0,0,0,15" BoxShadow="0 2 10 0 #10000000">
+									<Border.Background>
+										<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+											<GradientStop Color="#16A085" Offset="0.0"/>
+											<GradientStop Color="#1ABC9C" Offset="1.0"/>
+										</LinearGradientBrush>
+									</Border.Background>
+									<Border Padding="15">
+										<StackPanel Spacing="5">
+											<TextBlock Text="🔍 買家發布求購與物資徵求需求牆" FontSize="20" FontWeight="Bold" Foreground="White"/>
+											<TextBlock Text="找不到想買的二手物資？在這裡直接發起求購，讓校內擁有閒置物資的同學主動聯絡您！" FontSize="13" Foreground="#E0E6ED"/>
 										</StackPanel>
 									</Border>
+								</Border>
 
-									<Grid Grid.Column="2" Grid.Row="0" RowDefinitions="Auto, 15, Auto">
-										<Border Grid.Row="0" Background="#EDF2F7" Padding="15" CornerRadius="8" BorderBrush="#CBD5E0" BorderThickness="1">
+								<ListBox x:Name="BuyerWishProductList" Grid.Row="1" Background="Transparent" BorderThickness="0">
+									<ListBox.ItemTemplate>
+										<DataTemplate>
+											<Border Background="White" Margin="0,0,0,12" Padding="20" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" BoxShadow="0 2 8 0 #08000000">
+												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" ColumnDefinitions="*, Auto">
+													<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+														<Border Background="#16A085" CornerRadius="4" Padding="8,4">
+															<TextBlock Text="求購需求" FontSize="12" FontWeight="Bold" Foreground="White"/>
+														</Border>
+														<Border Background="#E2E8F0" CornerRadius="4" Padding="8,4">
+															<TextBlock Text="{Binding Category}" FontSize="12" Foreground="#4A5568"/>
+														</Border>
+													</StackPanel>
+													<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+														<TextBlock Text="狀態： " FontSize="13" Foreground="#718096"/>
+														<TextBlock Text="{Binding StatusText}" FontSize="13" FontWeight="Bold" Foreground="{Binding StatusColor}"/>
+													</StackPanel>
+
+													<TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Name}" FontSize="20" FontWeight="Black" Foreground="#2D3748" Margin="0,0,0,8"/>
+													<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+														<TextBlock Text="期望價 $" FontSize="13" Foreground="#16A085" VerticalAlignment="Bottom" Margin="0,0,5,2"/>
+														<TextBlock Text="{Binding Price}" FontSize="24" FontWeight="Black" Foreground="#16A085"/>
+													</StackPanel>
+
+													<Border Grid.Row="2" Grid.ColumnSpan="2" Background="#F8FAFC" CornerRadius="6" Padding="15" Margin="0,5,0,12">
+														<StackPanel Spacing="5">
+															<TextBlock Text="📝 買家求購細節與成色要求：" FontSize="12" FontWeight="Bold" Foreground="#718096"/>
+															<TextBlock Text="{Binding Description}" FontSize="14" Foreground="#4A5568" TextWrapping="Wrap"/>
+														</StackPanel>
+													</Border>
+
+													<StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="20" Margin="0,0,0,8">
+														<StackPanel Orientation="Horizontal" Spacing="4">
+															<TextBlock Text="👤 買家姓名：" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+															<Button Content="{Binding SellerName}" Click="ViewSellerReviews_Click" CommandParameter="{Binding VerifiedSchoolEmail}" Background="Transparent" Foreground="#16A085" FontWeight="Bold" FontSize="13" Padding="2,0" Cursor="Hand"/>
+															<TextBlock Text=" (" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+															<TextBlock Text="{Binding Department}" FontSize="13" Foreground="#2D3748" VerticalAlignment="Center"/>
+															<TextBlock Text=")" FontSize="13" Foreground="#718096" VerticalAlignment="Center"/>
+														</StackPanel>
+														<StackPanel Orientation="Horizontal" Spacing="4">
+															<TextBlock Text="🎓 對應課程：" FontSize="13" Foreground="#718096"/>
+															<TextBlock Text="{Binding CourseName}" FontSize="13" Foreground="#2D3748"/>
+														</StackPanel>
+													</StackPanel>
+
+													<Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*, *">
+														<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+															<TextBlock Text="📞 聯絡買家：" FontSize="13" Foreground="#718096"/>
+															<TextBlock Text="{Binding ContactInfo}" FontSize="13" FontWeight="Bold" Foreground="#2B6CB0"/>
+															<TextBlock Text=" | " FontSize="13" Foreground="#CBD5E0" Margin="5,0"/>
+															<TextBlock Text="{Binding VerifiedSchoolEmail}" FontSize="12" Foreground="#718096" VerticalAlignment="Center"/>
+														</StackPanel>
+														<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+															<TextBlock Text="📍 理想面交地點：" FontSize="13" Foreground="#718096"/>
+															<TextBlock Text="{Binding Location}" FontSize="13" FontWeight="Bold" Foreground="#C53030"/>
+														</StackPanel>
+													</Grid>
+
+													<Grid Grid.Row="5" Grid.ColumnSpan="2" RowDefinitions="Auto, Auto" Margin="0,10,0,0">
+														<Button Grid.Row="0" Content="💬 點我展開/收起即時留言區" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#EDF2F7" Foreground="#16A085" FontSize="12" HorizontalAlignment="Left" Padding="8,4"/>
+														<Border Grid.Row="1" Background="#F7FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,5,0,0" IsVisible="{Binding IsCommentVisible}">
+															<StackPanel Spacing="6">
+																<TextBlock Text="💬 即時問答對話艙：" FontSize="12" FontWeight="Bold" Foreground="#4A5568"/>
+																<ItemsControl ItemsSource="{Binding Comments}">
+																	<ItemsControl.ItemTemplate>
+																		<DataTemplate>
+																			<TextBlock Text="{Binding}" FontSize="13" Foreground="#2D3748" Margin="5,2" TextWrapping="Wrap"/>
+																		</DataTemplate>
+																	</ItemsControl.ItemTemplate>
+																</ItemsControl>
+																<Grid ColumnDefinitions="*, 8, Auto, 8, Auto" Margin="0,4,0,0">
+																	<TextBox Grid.Column="0" Tag="{Binding}" Watermark="輸入提供閒置物資的回覆資訊..." FontSize="12" Height="30" VerticalContentAlignment="Center"/>
+																	<Button Grid.Column="2" Content="🚀 送出" Click="SubmitComment_Click" Background="#16A085" Foreground="White" FontSize="11" Padding="10,4"/>
+																	<Button Grid.Column="4" Content="❌ 收起留言" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#718096" Foreground="White" FontSize="11" Padding="10,4"/>
+																</Grid>
+															</StackPanel>
+														</Border>
+													</Grid>
+
+												</Grid>
+											</Border>
+										</DataTemplate>
+									</ListBox.ItemTemplate>
+								</ListBox>
+							</Grid>
+						</TabItem>
+
+						<TabItem>
+							<ScrollViewer>
+								<Grid RowDefinitions="Auto, 20, Auto" Margin="5">
+
+									<Grid Grid.Row="0" ColumnDefinitions="*, 20, *">
+
+										<Border Grid.Column="0" Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
+											<StackPanel Spacing="12">
+												<TextBlock Text="🎒 智慧賣家商品管理與上架系統" FontSize="18" FontWeight="Bold" Foreground="#2C3E50"/>
+												<Separator/>
+												<Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto, 15, Auto, 15, Auto, 15, Auto">
+													<StackPanel Grid.Column="0" Grid.Row="0" Spacing="5">
+														<TextBlock Text="商品名稱 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="NameTextBox" Watermark="例如: 大四二手原文書"/>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="0" Spacing="5">
+														<TextBlock Text="價格 ($) *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="PriceTextBox" Watermark="請輸入數字"/>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="2" Spacing="5">
+														<TextBlock Text="二手分類 *" FontSize="13" FontWeight="Bold"/>
+														<ComboBox x:Name="CategoryListBox" HorizontalAlignment="Stretch">
+															<ListBoxItem Content="課本"/>
+															<ListBoxItem Content="宿舍用品"/>
+															<ListBoxItem Content="腳踏車"/>
+															<ListBoxItem Content="電子產品"/>
+															<ListBoxItem Content="其他"/>
+														</ComboBox>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="2" Spacing="5">
+														<TextBlock Text="校園市集分區 *" FontSize="13" FontWeight="Bold"/>
+														<ComboBox x:Name="CampusSectionListBox" HorizontalAlignment="Stretch">
+															<ListBoxItem Content="一般商品"/>
+															<ListBoxItem Content="畢業傳承商品"/>
+														</ComboBox>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="4" Spacing="5">
+														<TextBlock Text="賣家科系 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="DepartmentTextBox" Watermark="例如: 資管系"/>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="4" Spacing="5">
+														<TextBlock Text="對應課程名稱 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="CourseNameTextBox" Watermark="例如: 管理學"/>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="6" Spacing="5">
+														<TextBlock Text="賣家姓名 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="SellerNameTextBox" Watermark="請輸入姓名"/>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="6" Spacing="5">
+														<TextBlock Text="聯絡方式 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="ContactInfoTextBox" Watermark="手機、LINE 或 FB"/>
+													</StackPanel>
+												</Grid>
+												<StackPanel Spacing="5" Margin="0,5,0,0">
+													<TextBlock Text="指定交易面交地點 *" FontSize="13" FontWeight="Bold"/>
+													<TextBox x:Name="LocationTextBox" Watermark="請輸入或選取右側安全面交地點"/>
+												</StackPanel>
+												<StackPanel Spacing="5" Margin="0,5,0,0">
+													<TextBlock Text="商品詳細描述" FontSize="13" FontWeight="Bold"/>
+													<TextBox x:Name="DescriptionTextBox" Watermark="描述物資新舊狀況..." Height="70" AcceptsReturn="True" TextWrapping="Wrap"/>
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
+													<Button Content="❌ 刪除選定商品" Click="DeleteProductButton_Click" Background="#C0392B" Foreground="White" Padding="12,8" FontWeight="Bold"/>
+													<Button Content="💾 儲存修改" Click="UpdateProductButton_Click" Background="#F39C12" Foreground="White" Padding="12,8" FontWeight="Bold"/>
+													<Button Content="🚀 確認發布商品" Click="AddProduct_Click" Background="#27AE60" Foreground="White" Padding="20,8" FontWeight="Bold"/>
+												</StackPanel>
+											</StackPanel>
+										</Border>
+
+										<Border Grid.Column="2" Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
+											<StackPanel Spacing="12">
+												<TextBlock Text="🔍 智慧買家求購需求管理與上架系統" FontSize="18" FontWeight="Bold" Foreground="#16A085"/>
+												<Separator/>
+												<Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto, 15, Auto, 15, Auto, 15, Auto">
+													<StackPanel Grid.Column="0" Grid.Row="0" Spacing="5">
+														<TextBlock Text="商品/求購名稱 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishNameTextBox" Watermark="例如: 徵管理學課本"/>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="0" Spacing="5">
+														<TextBlock Text="期望價格 ($) *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishPriceTextBox" Watermark="請輸入期望數字"/>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="2" Spacing="5">
+														<TextBlock Text="二手分類 *" FontSize="13" FontWeight="Bold"/>
+														<ComboBox x:Name="BuyerWishCategoryListBox" HorizontalAlignment="Stretch">
+															<ListBoxItem Content="課本"/>
+															<ListBoxItem Content="宿舍用品"/>
+															<ListBoxItem Content="腳踏車"/>
+															<ListBoxItem Content="電子產品"/>
+															<ListBoxItem Content="其他"/>
+														</ComboBox>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="2" Spacing="5">
+														<TextBlock Text="買家科系 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishDepartmentTextBox" Watermark="例如: 資管系"/>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="4" Spacing="5">
+														<TextBlock Text="對應課程名稱 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishCourseNameTextBox" Watermark="例如: 管理學"/>
+													</StackPanel>
+													<StackPanel Grid.Column="2" Grid.Row="4" Spacing="5">
+														<TextBlock Text="買家姓名 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishSellerNameTextBox" Watermark="請輸入您的真實姓名"/>
+													</StackPanel>
+													<StackPanel Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="3" Spacing="5">
+														<TextBlock Text="聯絡方式 *" FontSize="13" FontWeight="Bold"/>
+														<TextBox x:Name="BuyerWishContactInfoTextBox" Watermark="手機、LINE 或 FB"/>
+													</StackPanel>
+												</Grid>
+												<StackPanel Spacing="5" Margin="0,5,0,0">
+													<TextBlock Text="理想交易面交地點 *" FontSize="13" FontWeight="Bold"/>
+													<TextBox x:Name="BuyerWishLocationTextBox" Watermark="請輸入或選取右側安全面交地點"/>
+												</StackPanel>
+												<StackPanel Spacing="5" Margin="0,5,0,0">
+													<TextBlock Text="求購詳細描述 / 徵求細節要求" FontSize="13" FontWeight="Bold"/>
+													<TextBox x:Name="BuyerWishDescriptionTextBox" Watermark="描述物資成色新舊狀況要求或特殊備註..." Height="70" AcceptsReturn="True" TextWrapping="Wrap"/>
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
+													<Button Content="🚀 確認發布求購需求" Click="AddBuyerWish_Click" Background="#16A085" Foreground="White" Padding="25,8" FontWeight="Bold"/>
+												</StackPanel>
+											</StackPanel>
+										</Border>
+									</Grid>
+
+									<Grid Grid.Row="2" ColumnDefinitions="*, 20, *, 20, *">
+										<Border Grid.Column="0" Background="#EDF2F7" Padding="15" CornerRadius="8" BorderBrush="#CBD5E0" BorderThickness="1">
 											<StackPanel Spacing="8">
 												<TextBlock Text="🛡️ 中正校內推薦安全面交地" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
-												<ListBox x:Name="RecommendedMeetingLocationListBox" Height="120" SelectionChanged="RecommendedMeetingLocationListBox_SelectionChanged">
+												<ListBox x:Name="RecommendedMeetingLocationListBox" Height="150" SelectionChanged="RecommendedMeetingLocationListBox_SelectionChanged">
 													<ListBoxItem Content="校門口大門警衛室"/>
 													<ListBoxItem Content="活動中心中庭廣場"/>
 													<ListBoxItem Content="CCU 總圖書館正門口"/>
@@ -361,47 +576,44 @@
 												</ListBox>
 											</StackPanel>
 										</Border>
-										<Border Grid.Row="2" Background="White" Padding="15" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
-											<StackPanel Spacing="10">
-												<TextBlock Text="⚙️ 商品狀態變更" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
-												<Button Content="🤝 標記此商品為【已售出】" Click="MarkAsSoldButton_Click" Background="#2980B9" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10"/>
+
+										<Border Grid.Column="2" Background="White" Padding="15" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
+											<StackPanel Spacing="8">
+												<TextBlock Text="📋 全量歷史貼文管理清單" FontSize="15" FontWeight="Bold" Foreground="#2C3E50"/>
+												<ListBox x:Name="SellerManagementPlainListBox" Height="105" Background="#F8F9FA"/>
+												<Button Content="📂 載入至左側賣家修改區" Click="LoadSelectedProductButton_Click" Background="#2980B9" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,5,0,0"/>
 											</StackPanel>
 										</Border>
+
+										<StackPanel Grid.Column="4" Spacing="10">
+											<Border Background="White" Padding="12" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
+												<StackPanel Spacing="5">
+													<TextBlock Text="⚙️ 狀態變更核心" FontSize="14" FontWeight="Bold" Foreground="#2C3E50"/>
+													<Button Content="🤝 標記此貼文【已結案/售出】" Click="MarkAsSoldButton_Click" Background="#2980B9" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="8"/>
+												</StackPanel>
+											</Border>
+											<Border x:Name="ReviewSectionPanel" Background="#FFF5F5" BorderBrush="#FEB2B2" BorderThickness="1" Padding="12" CornerRadius="8">
+												<StackPanel Spacing="5">
+													<Grid ColumnDefinitions="*, Auto">
+														<TextBlock Grid.Column="0" Text="⭐ 滿意度評價系統" FontSize="13" FontWeight="Bold" Foreground="#9B1C1C"/>
+														<ComboBox Grid.Column="1" x:Name="ReviewRatingListBox" Width="65" Height="25" Padding="2">
+															<ListBoxItem Content="5"/>
+															<ListBoxItem Content="4"/>
+															<ListBoxItem Content="3"/>
+															<ListBoxItem Content="2"/>
+															<ListBoxItem Content="1"/>
+														</ComboBox>
+													</Grid>
+													<TextBox x:Name="ReviewCommentTextBox" Watermark="輸入本次面交心得..." Height="30" Margin="0,4"/>
+													<Grid ColumnDefinitions="*, *">
+														<Button Grid.Column="0" Content="🔍 載入歷史" Click="LoadReviewButton_Click" Background="#4A5568" Foreground="White" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="2"/>
+														<Button Grid.Column="1" Content="🔒 送出評價" Click="SaveReviewButton_Click" Background="#9B1C1C" Foreground="White" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="2" Margin="4,0,0,0"/>
+													</Grid>
+												</StackPanel>
+											</Border>
+										</StackPanel>
 									</Grid>
 
-									<Border Grid.Column="0" Grid.Row="2" Background="White" Padding="15" CornerRadius="8" BoxShadow="0 2 10 0 #10000000">
-										<StackPanel Spacing="8">
-											<TextBlock Text="📋 賣家歷史商品清單（一行字精簡流，點擊可直接載入）" FontSize="15" FontWeight="Bold" Foreground="#2C3E50"/>
-											<ListBox x:Name="SellerManagementPlainListBox" Height="150" Background="#F8F9FA"/>
-											<Button Content="📂 載入所選商品至修改區" Click="LoadSelectedProductButton_Click" Background="#2980B9" Foreground="White" HorizontalAlignment="Right" Margin="0,5,0,0"/>
-										</StackPanel>
-									</Border>
-
-									<Border x:Name="ReviewSectionPanel" Grid.Column="2" Grid.Row="2" Background="#FFF5F5" BorderBrush="#FEB2B2" BorderThickness="2" Padding="20" CornerRadius="8">
-										<StackPanel Spacing="12">
-											<TextBlock Text="⭐ 滿意度交易評價系統（標記售出後解鎖）" FontSize="15" FontWeight="Bold" Foreground="#9B1C1C"/>
-											<Grid ColumnDefinitions="Auto, 15, *" RowDefinitions="Auto">
-												<StackPanel Grid.Column="0" Grid.Row="0" Spacing="5">
-													<TextBlock Text="星等 *" FontSize="13" FontWeight="Bold"/>
-													<ComboBox x:Name="ReviewRatingListBox" Width="100">
-														<ListBoxItem Content="5"/>
-														<ListBoxItem Content="4"/>
-														<ListBoxItem Content="3"/>
-														<ListBoxItem Content="2"/>
-														<ListBoxItem Content="1"/>
-													</ComboBox>
-												</StackPanel>
-												<StackPanel Grid.Column="2" Grid.Row="0" Spacing="5">
-													<TextBlock Text="交易評語回饋 *" FontSize="13" FontWeight="Bold"/>
-													<TextBox x:Name="ReviewCommentTextBox" Watermark="輸入本次面交的心得回饋..."/>
-												</StackPanel>
-											</Grid>
-											<StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-												<Button Content="🔍 載入歷史評價" Click="LoadReviewButton_Click" Background="#4A5568" Foreground="White" Padding="10,6"/>
-												<Button Content="🔒 送出滿意度評價" Click="SaveReviewButton_Click" Background="#9B1C1C" Foreground="White" Padding="12,6" FontWeight="Bold"/>
-											</StackPanel>
-										</StackPanel>
-									</Border>
 								</Grid>
 							</ScrollViewer>
 						</TabItem>
