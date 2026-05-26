@@ -2,16 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CCUTrade.Data;
 using CCUTrade.Models;
 
 namespace CCUTrade;
 
-// 🌟 貼文卡片專屬包裝盒：全面注入 INotifyPropertyChanged 屬性通知，確保留言區展開、新留言跳出時前端立刻連動！
 public class ProductPostViewModel : INotifyPropertyChanged
 {
     public Product SourceProduct { get; set; } = new();
@@ -28,11 +31,24 @@ public class ProductPostViewModel : INotifyPropertyChanged
     public string VerifiedSchoolEmail => SourceProduct.VerifiedSchoolEmail ?? "";
     public string Location => SourceProduct.Location ?? "校內面交";
 
+    private bool _hasPhoto = false;
+    public bool HasPhoto
+    {
+        get => _hasPhoto;
+        set { _hasPhoto = value; OnPropertyChanged(); }
+    }
+
+    private Bitmap? _cardBitmap;
+    public Bitmap? CardBitmap
+    {
+        get => _cardBitmap;
+        set { _cardBitmap = value; OnPropertyChanged(); }
+    }
+
     public string DaysLeftText { get; set; } = "";
     public string StatusText { get; set; } = "";
     public string StatusColor { get; set; } = "";
 
-    // 🌟 專屬留言艙擴充
     private bool _isCommentVisible = false;
     public bool IsCommentVisible
     {
@@ -42,7 +58,7 @@ public class ProductPostViewModel : INotifyPropertyChanged
 
     public ObservableCollection<string> Comments { get; set; } = new()
     {
-        "💡 系統提示：目前此求購/物資暫無留言，快來搶沙發詢問吧！"
+        "💡 系統提示：目前此求購/物資暫無留言，快來問答互動吧！"
     };
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -65,14 +81,22 @@ public partial class MainWindow : Window
     private List<WishlistItem> _currentWishlistItems = new();
     private ObservableCollection<string> _bellNotifications = new ObservableCollection<string>();
 
-    private string _currentUserName = "匿名同學";
-    private string _currentUserEmail = "";
+    private string _currentUserName = "高靖婷";
+    private string _currentUserEmail = "b11136000@ccu.edu.tw";
+
+    private byte[]? _sellerPhotoBytes;
+    private byte[]? _buyerPhotoBytes;
+    private static readonly Dictionary<int, byte[]> _globalPhotoCache = new Dictionary<int, byte[]>();
+
+    private int _editingPostId = 0;
+
+    private string _targetedReviewSellerEmail = "";
+    private int _targetedReviewProductId = 0;
 
     public MainWindow()
     {
         Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
 
-        // 全量控制項點名
         CategoryListBox = this.FindControl<ComboBox>("CategoryListBox");
         CampusSectionListBox = this.FindControl<ComboBox>("CampusSectionListBox");
         FilterCategoryListBox = this.FindControl<ComboBox>("FilterCategoryListBox");
@@ -123,6 +147,11 @@ public partial class MainWindow : Window
         BellNotificationPanel = this.FindControl<Border>("BellNotificationPanel");
         CloseBellPanelButton = this.FindControl<Button>("CloseBellPanelButton");
 
+        UploadPhotoBtn = this.FindControl<Button>("UploadPhotoBtn");
+        UploadBuyerPhotoBtn = this.FindControl<Button>("UploadBuyerPhotoBtn");
+
+        ReviewTargetItemTextBlock = this.FindControl<TextBlock>("ReviewTargetItemTextBlock");
+
         if (BellNotificationListBox != null) BellNotificationListBox.ItemsSource = _bellNotifications;
 
         if (CategoryListBox != null) CategoryListBox.SelectedIndex = 0;
@@ -140,7 +169,6 @@ public partial class MainWindow : Window
         RefreshWishlist();
     }
 
-    // 中正郵件認證
     private void RegisterOrLoginButton_Click(object? sender, RoutedEventArgs e)
     {
         if (StudentNameTextBox == null || SchoolEmailTextBox == null || NotificationTextBlock == null || CurrentUserTextBlock == null || LoginOverlayPage == null) return;
@@ -189,7 +217,181 @@ public partial class MainWindow : Window
                email.EndsWith("@alum.ccu.edu.tw", StringComparison.OrdinalIgnoreCase);
     }
 
-    // 發布賣家二手物資
+    private async void UploadPhotoBtn_Click(object? sender, RoutedEventArgs e)
+    {
+        var files = await this.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "請選取您的商品二手實拍相片",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+        });
+
+        if (files.Count > 0)
+        {
+            try
+            {
+                var localPath = files[0].Path.LocalPath;
+                _sellerPhotoBytes = await File.ReadAllBytesAsync(localPath);
+                if (UploadPhotoBtn != null) UploadPhotoBtn.Content = $"✅ 已成功讀取實體相片：{Path.GetFileName(localPath)}";
+            }
+            catch
+            {
+                if (NotificationTextBlock != null) NotificationTextBlock.Text = "⚠️ 讀取相片檔案失敗";
+            }
+        }
+    }
+
+    private async void UploadBuyerPhotoBtn_Click(object? sender, RoutedEventArgs e)
+    {
+        var files = await this.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "請選取求購預想物資照片",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
+        });
+
+        if (files.Count > 0)
+        {
+            try
+            {
+                var localPath = files[0].Path.LocalPath;
+                _buyerPhotoBytes = await File.ReadAllBytesAsync(localPath);
+                if (UploadBuyerPhotoBtn != null) UploadBuyerPhotoBtn.Content = $"✅ 已成功讀取意向相片：{Path.GetFileName(localPath)}";
+            }
+            catch
+            {
+                if (NotificationTextBlock != null) NotificationTextBlock.Text = "⚠️ 讀取相片檔案失敗";
+            }
+        }
+    }
+
+    private void InlineEditPost_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.CommandParameter is ProductPostViewModel vm)
+        {
+            _editingPostId = vm.Id;
+            if (MainWebsiteTabControl == null) return;
+            MainWebsiteTabControl.SelectedIndex = 3;
+
+            if (vm.CampusSection == "買家徵物貼文")
+            {
+                if (BuyerWishNameTextBox != null) BuyerWishNameTextBox.Text = vm.Name;
+                if (BuyerWishPriceTextBox != null) BuyerWishPriceTextBox.Text = vm.Price.ToString();
+                if (BuyerWishDescriptionTextBox != null) BuyerWishDescriptionTextBox.Text = vm.Description;
+                if (BuyerWishDepartmentTextBox != null) BuyerWishDepartmentTextBox.Text = vm.Department;
+                if (BuyerWishCourseNameTextBox != null) BuyerWishCourseNameTextBox.Text = vm.CourseName;
+                if (BuyerWishSellerNameTextBox != null) BuyerWishSellerNameTextBox.Text = vm.SellerName;
+                if (BuyerWishContactInfoTextBox != null) BuyerWishContactInfoTextBox.Text = vm.ContactInfo;
+                if (BuyerWishLocationTextBox != null) BuyerWishLocationTextBox.Text = vm.Location;
+            }
+            else
+            {
+                if (NameTextBox != null) NameTextBox.Text = vm.Name;
+                if (PriceTextBox != null) PriceTextBox.Text = vm.Price.ToString();
+                if (DescriptionTextBox != null) DescriptionTextBox.Text = vm.Description;
+                if (DepartmentTextBox != null) DepartmentTextBox.Text = vm.Department;
+                if (CourseNameTextBox != null) CourseNameTextBox.Text = vm.CourseName;
+                if (SellerNameTextBox != null) SellerNameTextBox.Text = vm.SellerName;
+                if (ContactInfoTextBox != null) ContactInfoTextBox.Text = vm.ContactInfo;
+                if (LocationTextBox != null) LocationTextBox.Text = vm.Location;
+            }
+
+            if (NotificationTextBlock != null) NotificationTextBlock.Text = $"⚙️ 已將 [{vm.Name}] 載入管理中心修正打錯字。";
+        }
+    }
+
+    private void ViewSellerReviews_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.CommandParameter is ProductPostViewModel vm)
+        {
+            _targetedReviewSellerEmail = vm.VerifiedSchoolEmail;
+            _targetedReviewProductId = vm.Id;
+
+            if (ReviewTargetItemTextBlock != null)
+            {
+                ReviewTargetItemTextBlock.Text = $"🛒 本次想對商品：【{vm.Name}】進行評價";
+            }
+
+            TriggerRenderOverlayReviews(_targetedReviewSellerEmail, btn.Content?.ToString() ?? "該用戶");
+        }
+    }
+
+    private void TriggerRenderOverlayReviews(string sellerEmail, string displayTitleName)
+    {
+        var overlay = this.FindControl<Grid>("SellerReviewOverlayPage");
+        var titleText = this.FindControl<TextBlock>("SellerReviewTitleTextBlock");
+        var historyListBox = this.FindControl<ListBox>("SellerReviewHistoryListBox");
+
+        if (overlay == null || historyListBox == null) return;
+
+        using var db = new AppDbContext();
+        var historicalSoldProducts = db.Products
+            .Where(p => p.VerifiedSchoolEmail == sellerEmail && p.IsSold && !string.IsNullOrEmpty(p.ReviewComment))
+            .ToList();
+
+        if (titleText != null) titleText.Text = $"👤 用戶 [{displayTitleName}] 的歷史信用評價";
+
+        if (historicalSoldProducts.Count == 0)
+        {
+            historyListBox.ItemsSource = new List<SellerReviewDisplayItem>
+            {
+                new SellerReviewDisplayItem { Name = "系統提示", ReviewRatingText = "⭐ 5.0", ReviewComment = "該用戶目前尚無負評，歡迎在下方送出您的第一手面交心得！🤝" }
+            };
+        }
+        else
+        {
+            var reviewItems = historicalSoldProducts.Select(p => new SellerReviewDisplayItem
+            {
+                Name = $"📦 評價商品：{p.Name}",
+                ReviewRatingText = $"⭐ {(p.ReviewRating > 0 ? p.ReviewRating.ToString() : "5")}.0",
+                ReviewComment = p.ReviewComment ?? ""
+            }).ToList();
+
+            historyListBox.ItemsSource = reviewItems;
+        }
+
+        overlay.IsVisible = true;
+    }
+
+    private void SaveReviewButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ReviewCommentTextBox == null || string.IsNullOrWhiteSpace(ReviewCommentTextBox.Text))
+        {
+            if (NotificationTextBlock != null) NotificationTextBlock.Text = "⚠️ 請輸入想要對商品進行評價的心得內容！";
+            return;
+        }
+
+        if (_targetedReviewProductId == 0) return;
+
+        using var db = new AppDbContext();
+        var targetProduct = db.Products.FirstOrDefault(p => p.Id == _targetedReviewProductId);
+
+        if (targetProduct != null)
+        {
+            int score = 5;
+            if (ReviewRatingListBox != null)
+            {
+                int.TryParse(GetListBoxText(ReviewRatingListBox, "5"), out score);
+            }
+
+            targetProduct.IsSold = true;
+            targetProduct.ReviewRating = score;
+            targetProduct.ReviewComment = $"[{score}分] {ReviewCommentTextBox.Text.Trim()} (買家: {_currentUserName})";
+
+            db.SaveChanges();
+
+            if (NotificationTextBlock != null)
+            {
+                NotificationTextBlock.Text = $"🎉 成功對商品【{targetProduct.Name}】送出 {score} 分評價！";
+            }
+
+            TriggerRenderOverlayReviews(_targetedReviewSellerEmail, targetProduct.SellerName ?? "賣家");
+
+            ReviewCommentTextBox.Text = "";
+            RefreshProducts();
+        }
+    }
+
     private void AddProduct_Click(object? sender, RoutedEventArgs e)
     {
         if (NotificationTextBlock == null || NameTextBox == null || PriceTextBox == null || SellerNameTextBox == null) return;
@@ -208,33 +410,60 @@ public partial class MainWindow : Window
             return;
         }
 
-        var product = new Product
-        {
-            Name = name,
-            Price = price,
-            Description = DescriptionTextBox?.Text?.Trim() ?? "",
-            Department = DepartmentTextBox?.Text?.Trim() ?? "未填寫",
-            CourseName = CourseNameTextBox?.Text?.Trim() ?? "無",
-            Category = GetListBoxText(CategoryListBox, "其他"),
-            CampusSection = GetListBoxText(CampusSectionListBox, "一般商品"),
-            SellerName = SellerNameTextBox.Text?.Trim() ?? "",
-            ContactInfo = ContactInfoTextBox?.Text?.Trim() ?? "",
-            Location = LocationTextBox?.Text?.Trim() ?? "校內面交",
-            VerifiedSchoolEmail = _currentUserEmail,
-            CreatedAt = DateTime.Now,
-            IsSold = false
-        };
-
         using var db = new AppDbContext();
-        db.Products.Add(product);
+        int savedId = 0;
+
+        if (_editingPostId > 0)
+        {
+            var target = db.Products.FirstOrDefault(p => p.Id == _editingPostId);
+            if (target != null)
+            {
+                target.Name = name;
+                target.Price = price;
+                target.Description = DescriptionTextBox?.Text?.Trim() ?? "";
+                target.ContactInfo = ContactInfoTextBox?.Text?.Trim() ?? "";
+                target.Location = LocationTextBox?.Text?.Trim() ?? "校內面交";
+                savedId = target.Id;
+            }
+            _editingPostId = 0;
+        }
+        else
+        {
+            var product = new Product
+            {
+                Name = name,
+                Price = price,
+                Description = DescriptionTextBox?.Text?.Trim() ?? "",
+                Department = DepartmentTextBox?.Text?.Trim() ?? "未填寫",
+                CourseName = CourseNameTextBox?.Text?.Trim() ?? "無",
+                Category = GetListBoxText(CategoryListBox, "其他"),
+                CampusSection = GetListBoxText(CampusSectionListBox, "一般商品"),
+                SellerName = SellerNameTextBox.Text?.Trim() ?? "",
+                ContactInfo = ContactInfoTextBox?.Text?.Trim() ?? "",
+                Location = LocationTextBox?.Text?.Trim() ?? "校內面交",
+                VerifiedSchoolEmail = _currentUserEmail,
+                CreatedAt = DateTime.Now,
+                IsSold = false
+            };
+            db.Products.Add(product);
+            db.SaveChanges();
+            savedId = product.Id;
+        }
+
         db.SaveChanges();
+
+        if (_sellerPhotoBytes != null && savedId > 0)
+        {
+            _globalPhotoCache[savedId] = _sellerPhotoBytes;
+        }
+
+        _sellerPhotoBytes = null;
+        if (UploadPhotoBtn != null) UploadPhotoBtn.Content = "📁 點擊瀏覽並載入本機圖片檔案...";
 
         ClearInputFields();
         RefreshProducts();
-        CheckWishlistNotification(product);
     }
 
-    // 發布買家期望需求
     private void AddBuyerWish_Click(object? sender, RoutedEventArgs e)
     {
         if (NotificationTextBlock == null || BuyerWishNameTextBox == null || BuyerWishPriceTextBox == null || BuyerWishSellerNameTextBox == null) return;
@@ -253,36 +482,63 @@ public partial class MainWindow : Window
             return;
         }
 
-        var product = new Product
-        {
-            Name = wishName,
-            Price = price,
-            Description = BuyerWishDescriptionTextBox?.Text?.Trim() ?? "",
-            Department = BuyerWishDepartmentTextBox?.Text?.Trim() ?? "未填寫",
-            CourseName = BuyerWishCourseNameTextBox?.Text?.Trim() ?? "無",
-            Category = GetListBoxText(BuyerWishCategoryListBox, "其他"),
-            CampusSection = "買家徵物貼文",
-            SellerName = BuyerWishSellerNameTextBox.Text?.Trim() ?? "",
-            ContactInfo = BuyerWishContactInfoTextBox?.Text?.Trim() ?? "",
-            Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交",
-            VerifiedSchoolEmail = _currentUserEmail,
-            CreatedAt = DateTime.Now,
-            IsSold = false
-        };
-
         using var db = new AppDbContext();
-        db.Products.Add(product);
+        int savedId = 0;
+
+        if (_editingPostId > 0)
+        {
+            var target = db.Products.FirstOrDefault(p => p.Id == _editingPostId);
+            if (target != null)
+            {
+                target.Name = wishName;
+                target.Price = price;
+                target.Description = BuyerWishDescriptionTextBox?.Text?.Trim() ?? "";
+                target.ContactInfo = BuyerWishContactInfoTextBox?.Text?.Trim() ?? "";
+                target.Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交";
+                savedId = target.Id;
+            }
+            _editingPostId = 0;
+        }
+        else
+        {
+            var product = new Product
+            {
+                Name = wishName,
+                Price = price,
+                Description = BuyerWishDescriptionTextBox?.Text?.Trim() ?? "",
+                Department = BuyerWishDepartmentTextBox?.Text?.Trim() ?? "未填寫",
+                CourseName = BuyerWishCourseNameTextBox?.Text?.Trim() ?? "無",
+                Category = GetListBoxText(BuyerWishCategoryListBox, "其他"),
+                CampusSection = "買家徵物貼文",
+                SellerName = BuyerWishSellerNameTextBox.Text?.Trim() ?? "",
+                ContactInfo = BuyerWishContactInfoTextBox?.Text?.Trim() ?? "",
+                Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交",
+                VerifiedSchoolEmail = _currentUserEmail,
+                CreatedAt = DateTime.Now,
+                IsSold = false
+            };
+            db.Products.Add(product);
+            db.SaveChanges();
+            savedId = product.Id;
+        }
+
         db.SaveChanges();
+
+        if (_buyerPhotoBytes != null && savedId > 0)
+        {
+            _globalPhotoCache[savedId] = _buyerPhotoBytes;
+        }
+
+        _buyerPhotoBytes = null;
+        if (UploadBuyerPhotoBtn != null) UploadBuyerPhotoBtn.Content = "📁 點擊瀏覽並載任意向參考圖...";
 
         if (BuyerWishNameTextBox != null) BuyerWishNameTextBox.Text = "";
         if (BuyerWishPriceTextBox != null) BuyerWishPriceTextBox.Text = "";
         if (BuyerWishDescriptionTextBox != null) BuyerWishDescriptionTextBox.Text = "";
 
         RefreshProducts();
-        NotificationTextBlock.Text = "🎉 求購需求成功發布至【買家徵物需求牆】！";
     }
 
-    // 🌟 核心功能一：點擊小圖標按鈕，即時切換展開或收起留言艙！
     private void ToggleCommentBox_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is ProductPostViewModel vm)
@@ -291,35 +547,26 @@ public partial class MainWindow : Window
         }
     }
 
-    // 🌟 核心功能二：即時留言發布與追擊功能！
     private void SubmitComment_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Parent is Grid grid)
         {
-            // 動態向上撈取同層的 TextBox 輸入框
             var textBox = grid.Children.OfType<TextBox>().FirstOrDefault();
             if (textBox == null || string.IsNullOrWhiteSpace(textBox.Text)) return;
 
-            // 獲取該卡片對應的資料包
             if (textBox.Tag is ProductPostViewModel vm)
             {
                 var userInput = textBox.Text.Trim();
                 var timeStamp = DateTime.Now.ToString("HH:mm");
 
-                // 如果留言還是初始空話，先清空它
                 if (vm.Comments.Count == 1 && vm.Comments[0].Contains("系統提示"))
                 {
                     vm.Comments.Clear();
                 }
 
-                // 塞入高質感的即時問答格式
                 vm.Comments.Add($"💬 [{timeStamp}] {_currentUserName}：{userInput}");
-                textBox.Text = ""; // 留言成功送出後自動清空
-
-                if (NotificationTextBlock != null)
-                {
-                    NotificationTextBlock.Text = $"💬 成功在貼文 [{vm.Name}] 內留下一則即時交易對話！";
-                }
+                textBox.Text = "";
+                if (NotificationTextBlock != null) NotificationTextBlock.Text = $"💬 成功在貼文 [{vm.Name}] 內留下一則即時交易對話！";
             }
         }
     }
@@ -341,9 +588,11 @@ public partial class MainWindow : Window
         if (product != null)
         {
             product.IsSold = true;
+            // 🌟 核心升級：記錄售出的黃金時刻，供 24 小時緩衝防線精準計時
+            product.CreatedAt = DateTime.Now;
             db.SaveChanges();
             RefreshProducts();
-            NotificationTextBlock.Text = $"已將貼文標記為已結案。🤝 請填寫滿意度交易評價！";
+            NotificationTextBlock.Text = $"已將貼文標記為已結案。🤝 已沉降至大廳底部保留24小時供買家留言評價！";
         }
     }
 
@@ -352,74 +601,77 @@ public partial class MainWindow : Window
         RefreshProducts();
     }
 
+    // 🌟 核心調整：智慧篩選與分流沉降排序
     private void RefreshProducts()
     {
         if (ProductList == null || GraduationProductList == null || BuyerWishProductList == null || SellerManagementPlainListBox == null) return;
 
         using var db = new AppDbContext();
-        var query = db.Products.Where(p => p.CreatedAt >= DateTime.Now.AddDays(-30)).AsQueryable();
 
+        // 1. 基本安全時間過濾防線
+        var allRawProducts = db.Products.ToList();
+        var filteredList = new List<Product>();
+
+        foreach (var p in allRawProducts)
+        {
+            if (!p.IsSold)
+            {
+                // 未售出商品：保留 30 天
+                if ((DateTime.Now - p.CreatedAt).TotalDays <= 30) filteredList.Add(p);
+            }
+            else
+            {
+                // 🌟 核心升級：已結案商品精準留存 24 小時（1天），超過才自動退場刪除！
+                if ((DateTime.Now - p.CreatedAt).TotalHours <= 24) filteredList.Add(p);
+            }
+        }
+
+        // 2. 多條件搜尋篩選器同步過處理
         var searchKey = SearchTextBox?.Text?.Trim() ?? "";
         if (!string.IsNullOrWhiteSpace(searchKey))
         {
-            query = query.Where(p => p.Name.Contains(searchKey) || (p.Description != null && p.Description.Contains(searchKey)));
+            filteredList = filteredList.Where(p => p.Name.Contains(searchKey) || (p.Description != null && p.Description.Contains(searchKey))).ToList();
         }
 
         var categoryFilter = GetListBoxText(FilterCategoryListBox, "全部");
-        if (categoryFilter != "全部")
-        {
-            query = query.Where(p => p.Category == categoryFilter);
-        }
+        if (categoryFilter != "全部") filteredList = filteredList.Where(p => p.Category == categoryFilter).ToList();
 
         var campusSectionFilter = GetListBoxText(CampusSectionFilterListBox, "全部");
-        if (campusSectionFilter != "全部")
-        {
-            query = query.Where(p => p.CampusSection == campusSectionFilter);
-        }
+        if (campusSectionFilter != "全部") filteredList = filteredList.Where(p => p.CampusSection == campusSectionFilter).ToList();
 
-        var statusFilter = GetListBoxText(StatusFilterListBox, "全部");
-        if (statusFilter == "販售中")
-        {
-            query = query.Where(p => !p.IsSold);
-        }
-        else if (statusFilter == "已售出")
-        {
-            query = query.Where(p => p.IsSold);
-        }
+        // 🌟 3. 核心大招：智慧排序沉降法
+        // 先按「活躍狀態（未售出的在前面）」排序，同狀態下再按「時間由新到舊」排列
+        var sortedProducts = filteredList
+            .OrderBy(p => p.IsSold ? 1 : 0)
+            .ThenByDescending(p => p.CreatedAt)
+            .ToList();
 
-        var deptKey = DepartmentSearchTextBox?.Text?.Trim() ?? "";
-        if (!string.IsNullOrWhiteSpace(deptKey))
-        {
-            query = query.Where(p => p.Department != null && p.Department.Contains(deptKey));
-        }
+        _currentProducts = sortedProducts;
 
-        var courseKey = CourseSearchTextBox?.Text?.Trim() ?? "";
-        if (!string.IsNullOrWhiteSpace(courseKey))
-        {
-            query = query.Where(p => p.CourseName != null && p.CourseName.Contains(courseKey));
-        }
-
-        if (MinPriceTextBox != null && decimal.TryParse(MinPriceTextBox.Text, out decimal minPrice))
-        {
-            query = query.Where(p => p.Price >= minPrice);
-        }
-        if (MaxPriceTextBox != null && decimal.TryParse(MaxPriceTextBox.Text, out decimal maxPrice))
-        {
-            query = query.Where(p => p.Price <= maxPrice);
-        }
-
-        var filteredProducts = query.OrderByDescending(p => p.CreatedAt).ToList();
-        _currentProducts = filteredProducts;
-
-        var postViewModels = filteredProducts.Select(p => {
+        var postViewModels = sortedProducts.Select(p => {
             var daysLeft = 30 - (DateTime.Now.Date - p.CreatedAt.Date).Days;
-            return new ProductPostViewModel
+
+            var vm = new ProductPostViewModel
             {
                 SourceProduct = p,
-                DaysLeftText = $"⏳ 剩餘 {Math.Max(0, daysLeft)} 天",
-                StatusText = p.IsSold ? "已結案 🤝" : "活躍中 🔥",
-                StatusColor = p.IsSold ? "#718096" : "#27AE60"
+                DaysLeftText = p.IsSold ? "⏳ 24小時後移入歷史庫" : $"⏳ 剩餘 {Math.Max(0, daysLeft)} 天",
+                StatusText = p.IsSold ? "已售出 🤝 (留存一天供人評價)" : "活躍中 🔥",
+                StatusColor = p.IsSold ? "#E74C3C" : "#27AE60" // 已售出改用亮眼警示紅提示買家留評
             };
+
+            if (_globalPhotoCache.TryGetValue(p.Id, out byte[]? photoData) && photoData != null)
+            {
+                try
+                {
+                    using var ms = new MemoryStream(photoData);
+                    vm.CardBitmap = new Bitmap(ms);
+                    vm.HasPhoto = true;
+                }
+                catch { vm.HasPhoto = false; }
+            }
+            else { vm.HasPhoto = false; }
+
+            return vm;
         }).ToList();
 
         ProductList.ItemsSource = postViewModels.Where(v => v.CampusSection != "買家徵物貼文").ToList();
@@ -428,49 +680,6 @@ public partial class MainWindow : Window
 
         var plainDisplayList = postViewModels.Select(v => $"{v.Name} | ${v.Price} | {v.CampusSection} | {v.StatusText}").ToList();
         SellerManagementPlainListBox.ItemsSource = plainDisplayList;
-    }
-
-    private void ViewSellerReviews_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.CommandParameter is string sellerEmail)
-        {
-            var overlay = this.FindControl<Grid>("SellerReviewOverlayPage");
-            var titleText = this.FindControl<TextBlock>("SellerReviewTitleTextBlock");
-            var historyListBox = this.FindControl<ListBox>("SellerReviewHistoryListBox");
-
-            if (overlay == null || historyListBox == null) return;
-
-            using var db = new AppDbContext();
-            var historicalSoldProducts = db.Products
-                .Where(p => p.VerifiedSchoolEmail == sellerEmail && p.IsSold && !string.IsNullOrEmpty(p.ReviewComment))
-                .ToList();
-
-            if (titleText != null)
-            {
-                titleText.Text = $"👤 用戶 [{btn.Content}] 的歷史信用評價";
-            }
-
-            if (historicalSoldProducts.Count == 0)
-            {
-                historyListBox.ItemsSource = new List<SellerReviewDisplayItem>
-                {
-                    new SellerReviewDisplayItem { Name = "系統提示", ReviewRatingText = "⭐ 0.0", ReviewComment = "該用戶目前在校內市集尚無交易回饋紀錄。🤝" }
-                };
-            }
-            else
-            {
-                var reviewItems = historicalSoldProducts.Select(p => new SellerReviewDisplayItem
-                {
-                    Name = $"📦 成交紀錄：{p.Name}",
-                    ReviewRatingText = $"⭐ {(p.ReviewRating > 0 ? p.ReviewRating.ToString() : "5")}.0",
-                    ReviewComment = p.ReviewComment ?? "雙方面交過程非常順暢，預設滿分！"
-                }).ToList();
-
-                historyListBox.ItemsSource = reviewItems;
-            }
-
-            overlay.IsVisible = true;
-        }
     }
 
     private void CloseSellerReviewOverlay_Click(object? sender, RoutedEventArgs e)
@@ -487,7 +696,7 @@ public partial class MainWindow : Window
 
         if (matched.Count > 0)
         {
-            _bellNotifications.Insert(0, $"[{DateTime.Now:HH:mm}] 🎉 許願匹配：出現了符合您追蹤「{string.Join("、", matched)}」的物資需求：{product.Name}！");
+            _bellNotifications.Insert(0, $"🎉 智慧匹配：符合「{string.Join("、", matched)}」追蹤之物資需求：{product.Name}！");
             TriggerBellUI();
         }
     }
@@ -508,7 +717,7 @@ public partial class MainWindow : Window
             var matchedOldProducts = db.Products.Where(p => p.Name.Contains(kw) || (p.Description != null && p.Description.Contains(kw))).ToList();
             foreach (var p in matchedOldProducts)
             {
-                _bellNotifications.Insert(0, $"[{DateTime.Now:HH:mm}] 🔮 匹配成功：資料庫已有商品：{p.Name} (${p.Price})！");
+                _bellNotifications.Insert(0, $"🔮 匹配：{p.Name} (${p.Price})！");
             }
             if (matchedOldProducts.Count > 0) TriggerBellUI();
         }
@@ -518,9 +727,10 @@ public partial class MainWindow : Window
 
     private void TriggerBellUI()
     {
-        if (NotificationTextBlock != null) NotificationTextBlock.Text = $"🔔 右上角智慧小鈴鐺響起！有全新動態更新了！";
+        if (NotificationTextBlock != null) NotificationTextBlock.Text = $"🔔 智慧追蹤匹配成功！請查看右上角小鈴鐺！";
         var dot = this.FindControl<Control>("NewNotificationDot");
         if (dot != null) dot.IsVisible = true;
+        if (BellNotificationPanel != null) BellNotificationPanel.IsVisible = true;
     }
 
     private void NotificationBellButton_Click(object? sender, RoutedEventArgs e)
@@ -528,7 +738,6 @@ public partial class MainWindow : Window
         if (BellNotificationPanel == null || CloseBellPanelButton == null) return;
         BellNotificationPanel.IsVisible = true;
         CloseBellPanelButton.IsVisible = true;
-
         var dot = this.FindControl<Control>("NewNotificationDot");
         if (dot != null) dot.IsVisible = false;
     }
@@ -553,8 +762,8 @@ public partial class MainWindow : Window
         if (WishlistList == null) return;
         using var db = new AppDbContext();
         _currentWishlistItems = db.WishlistItems.OrderByDescending(w => w.CreatedAt).ToList();
-        var list = _currentWishlistItems.Select(w => $"🔮 監控關鍵字：{w.Keyword}").ToList();
-        WishlistList.ItemsSource = list.Count == 0 ? new List<string> { "清單是空的，快去大廳許願吧！" } : list;
+        var list = _currentWishlistItems.Select(w => $"🔮 監控中：{w.Keyword}").ToList();
+        WishlistList.ItemsSource = list.Count == 0 ? new List<string> { "清單目前為空" } : list;
     }
 
     private void OnGoToHomePage_Click(object? sender, RoutedEventArgs e) { if (MainWebsiteTabControl != null) MainWebsiteTabControl.SelectedIndex = 0; }
@@ -624,23 +833,6 @@ public partial class MainWindow : Window
         ReviewCommentTextBox.Text = prod.ReviewComment ?? "物資完成面交，過程順暢愉快！";
     }
 
-    private void SaveReviewButton_Click(object? sender, RoutedEventArgs e)
-    {
-        var prod = GetSelectedProduct();
-        if (prod == null || ReviewCommentTextBox == null) return;
-        using var db = new AppDbContext();
-        var target = db.Products.FirstOrDefault(p => p.Id == prod.Id);
-        if (target != null)
-        {
-            target.ReviewComment = ReviewCommentTextBox.Text;
-            target.ReviewRating = 5;
-            db.SaveChanges();
-            ReviewCommentTextBox.Text = "";
-            RefreshProducts();
-            if (NotificationTextBlock != null) NotificationTextBlock.Text = "🎉 滿意度評價儲存成功！";
-        }
-    }
-
     private Product? GetSelectedProduct()
     {
         if (SellerManagementPlainListBox == null || SellerManagementPlainListBox.SelectedIndex < 0) return null;
@@ -651,21 +843,18 @@ public partial class MainWindow : Window
     private string GetListBoxText(Control? box, string def)
     {
         if (box == null) return def;
-
         if (box is ComboBox cb)
         {
             if (cb.SelectedItem is ListBoxItem lbi) return lbi.Content?.ToString() ?? def;
             if (cb.SelectedItem is string strText) return strText;
             return cb.SelectedItem?.ToString() ?? def;
         }
-
         if (box is ListBox lb)
         {
             if (lb.SelectedItem is ListBoxItem li) return li.Content?.ToString() ?? def;
             if (lb.SelectedItem is string lbStr) return lbStr;
             return lb.SelectedItem?.ToString() ?? def;
         }
-
         return def;
     }
 
