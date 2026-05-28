@@ -412,6 +412,7 @@ public partial class MainWindow : Window
 
         using var db = new AppDbContext();
         int savedId = 0;
+        Product? productToNotify = null; // 🌟 用來傳給雷達的變數
 
         if (_editingPostId > 0)
         {
@@ -424,6 +425,7 @@ public partial class MainWindow : Window
                 target.ContactInfo = ContactInfoTextBox?.Text?.Trim() ?? "";
                 target.Location = LocationTextBox?.Text?.Trim() ?? "校內面交";
                 savedId = target.Id;
+                productToNotify = target; // 紀錄修改的商品
             }
             _editingPostId = 0;
         }
@@ -448,9 +450,16 @@ public partial class MainWindow : Window
             db.Products.Add(product);
             db.SaveChanges();
             savedId = product.Id;
+            productToNotify = product; // 紀錄全新發布的商品
         }
 
         db.SaveChanges();
+
+        // 🔥【核心修復點】：發布或修改商品成功存檔後，立刻派雷達去掃描追蹤！
+        if (productToNotify != null)
+        {
+            CheckWishlistNotification(productToNotify);
+        }
 
         if (_sellerPhotoBytes != null && savedId > 0)
         {
@@ -484,6 +493,7 @@ public partial class MainWindow : Window
 
         using var db = new AppDbContext();
         int savedId = 0;
+        Product? wishToNotify = null; // 🌟 用來傳給雷達的變數
 
         if (_editingPostId > 0)
         {
@@ -496,6 +506,7 @@ public partial class MainWindow : Window
                 target.ContactInfo = BuyerWishContactInfoTextBox?.Text?.Trim() ?? "";
                 target.Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交";
                 savedId = target.Id;
+                wishToNotify = target; // 紀錄修改的求購需求
             }
             _editingPostId = 0;
         }
@@ -520,9 +531,16 @@ public partial class MainWindow : Window
             db.Products.Add(product);
             db.SaveChanges();
             savedId = product.Id;
+            wishToNotify = product; // 紀錄全新發布的求購需求
         }
 
         db.SaveChanges();
+
+        // 🔥【核心修復點】：買家徵物需求發布成功存檔後，也立刻讓雷達進行關鍵字比對！
+        if (wishToNotify != null)
+        {
+            CheckWishlistNotification(wishToNotify);
+        }
 
         if (_buyerPhotoBytes != null && savedId > 0)
         {
@@ -588,7 +606,6 @@ public partial class MainWindow : Window
         if (product != null)
         {
             product.IsSold = true;
-            // 🌟 核心升級：記錄售出的黃金時刻，供 24 小時緩衝防線精準計時
             product.CreatedAt = DateTime.Now;
             db.SaveChanges();
             RefreshProducts();
@@ -601,14 +618,12 @@ public partial class MainWindow : Window
         RefreshProducts();
     }
 
-    // 🌟 核心調整：智慧篩選與分流沉降排序
     private void RefreshProducts()
     {
         if (ProductList == null || GraduationProductList == null || BuyerWishProductList == null || SellerManagementPlainListBox == null) return;
 
         using var db = new AppDbContext();
 
-        // 1. 基本安全時間過濾防線
         var allRawProducts = db.Products.ToList();
         var filteredList = new List<Product>();
 
@@ -616,17 +631,14 @@ public partial class MainWindow : Window
         {
             if (!p.IsSold)
             {
-                // 未售出商品：保留 30 天
                 if ((DateTime.Now - p.CreatedAt).TotalDays <= 30) filteredList.Add(p);
             }
             else
             {
-                // 🌟 核心升級：已結案商品精準留存 24 小時（1天），超過才自動退場刪除！
                 if ((DateTime.Now - p.CreatedAt).TotalHours <= 24) filteredList.Add(p);
             }
         }
 
-        // 2. 多條件搜尋篩選器同步過處理
         var searchKey = SearchTextBox?.Text?.Trim() ?? "";
         if (!string.IsNullOrWhiteSpace(searchKey))
         {
@@ -639,8 +651,6 @@ public partial class MainWindow : Window
         var campusSectionFilter = GetListBoxText(CampusSectionFilterListBox, "全部");
         if (campusSectionFilter != "全部") filteredList = filteredList.Where(p => p.CampusSection == campusSectionFilter).ToList();
 
-        // 🌟 3. 核心大招：智慧排序沉降法
-        // 先按「活躍狀態（未售出的在前面）」排序，同狀態下再按「時間由新到舊」排列
         var sortedProducts = filteredList
             .OrderBy(p => p.IsSold ? 1 : 0)
             .ThenByDescending(p => p.CreatedAt)
@@ -656,7 +666,7 @@ public partial class MainWindow : Window
                 SourceProduct = p,
                 DaysLeftText = p.IsSold ? "⏳ 24小時後移入歷史庫" : $"⏳ 剩餘 {Math.Max(0, daysLeft)} 天",
                 StatusText = p.IsSold ? "已售出 🤝 (留存一天供人評價)" : "活躍中 🔥",
-                StatusColor = p.IsSold ? "#E74C3C" : "#27AE60" // 已售出改用亮眼警示紅提示買家留評
+                StatusColor = p.IsSold ? "#E74C3C" : "#27AE60"
             };
 
             if (_globalPhotoCache.TryGetValue(p.Id, out byte[]? photoData) && photoData != null)
