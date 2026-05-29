@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Microsoft.EntityFrameworkCore; // 🌟 確保引入，才能使用 Include 撈出關聯留言
 using CCUTrade.Data;
 using CCUTrade.Models;
 
@@ -56,10 +57,8 @@ public class ProductPostViewModel : INotifyPropertyChanged
         set { _isCommentVisible = value; OnPropertyChanged(); }
     }
 
-    public ObservableCollection<string> Comments { get; set; } = new()
-    {
-        "💡 系統提示：目前此求購/物資暫無留言，快來問答互動吧！"
-    };
+    // 🌟 將資料庫的實體留言列表轉換成前端能看得懂的 ObservableCollection 字串清單
+    public ObservableCollection<string> Comments { get; set; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -86,7 +85,6 @@ public partial class MainWindow : Window
 
     private byte[]? _sellerPhotoBytes;
     private byte[]? _buyerPhotoBytes;
-    private static readonly Dictionary<int, byte[]> _globalPhotoCache = new Dictionary<int, byte[]>();
 
     private int _editingPostId = 0;
 
@@ -411,8 +409,7 @@ public partial class MainWindow : Window
         }
 
         using var db = new AppDbContext();
-        int savedId = 0;
-        Product? productToNotify = null; // 🌟 用來傳給雷達的變數
+        Product? productToNotify = null;
 
         if (_editingPostId > 0)
         {
@@ -424,8 +421,13 @@ public partial class MainWindow : Window
                 target.Description = DescriptionTextBox?.Text?.Trim() ?? "";
                 target.ContactInfo = ContactInfoTextBox?.Text?.Trim() ?? "";
                 target.Location = LocationTextBox?.Text?.Trim() ?? "校內面交";
-                savedId = target.Id;
-                productToNotify = target; // 紀錄修改的商品
+
+                if (_sellerPhotoBytes != null)
+                {
+                    target.PhotoData = _sellerPhotoBytes;
+                }
+
+                productToNotify = target;
             }
             _editingPostId = 0;
         }
@@ -445,25 +447,18 @@ public partial class MainWindow : Window
                 Location = LocationTextBox?.Text?.Trim() ?? "校內面交",
                 VerifiedSchoolEmail = _currentUserEmail,
                 CreatedAt = DateTime.Now,
-                IsSold = false
+                IsSold = false,
+                PhotoData = _sellerPhotoBytes
             };
             db.Products.Add(product);
-            db.SaveChanges();
-            savedId = product.Id;
-            productToNotify = product; // 紀錄全新發布的商品
+            productToNotify = product;
         }
 
         db.SaveChanges();
 
-        // 🔥【核心修復點】：發布或修改商品成功存檔後，立刻派雷達去掃描追蹤！
         if (productToNotify != null)
         {
             CheckWishlistNotification(productToNotify);
-        }
-
-        if (_sellerPhotoBytes != null && savedId > 0)
-        {
-            _globalPhotoCache[savedId] = _sellerPhotoBytes;
         }
 
         _sellerPhotoBytes = null;
@@ -492,8 +487,7 @@ public partial class MainWindow : Window
         }
 
         using var db = new AppDbContext();
-        int savedId = 0;
-        Product? wishToNotify = null; // 🌟 用來傳給雷達的變數
+        Product? wishToNotify = null;
 
         if (_editingPostId > 0)
         {
@@ -505,8 +499,13 @@ public partial class MainWindow : Window
                 target.Description = BuyerWishDescriptionTextBox?.Text?.Trim() ?? "";
                 target.ContactInfo = BuyerWishContactInfoTextBox?.Text?.Trim() ?? "";
                 target.Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交";
-                savedId = target.Id;
-                wishToNotify = target; // 紀錄修改的求購需求
+
+                if (_buyerPhotoBytes != null)
+                {
+                    target.PhotoData = _buyerPhotoBytes;
+                }
+
+                wishToNotify = target;
             }
             _editingPostId = 0;
         }
@@ -526,25 +525,18 @@ public partial class MainWindow : Window
                 Location = BuyerWishLocationTextBox?.Text?.Trim() ?? "校內面交",
                 VerifiedSchoolEmail = _currentUserEmail,
                 CreatedAt = DateTime.Now,
-                IsSold = false
+                IsSold = false,
+                PhotoData = _buyerPhotoBytes
             };
             db.Products.Add(product);
-            db.SaveChanges();
-            savedId = product.Id;
-            wishToNotify = product; // 紀錄全新發布的求購需求
+            wishToNotify = product;
         }
 
         db.SaveChanges();
 
-        // 🔥【核心修復點】：買家徵物需求發布成功存檔後，也立刻讓雷達進行關鍵字比對！
         if (wishToNotify != null)
         {
             CheckWishlistNotification(wishToNotify);
-        }
-
-        if (_buyerPhotoBytes != null && savedId > 0)
-        {
-            _globalPhotoCache[savedId] = _buyerPhotoBytes;
         }
 
         _buyerPhotoBytes = null;
@@ -576,15 +568,24 @@ public partial class MainWindow : Window
             {
                 var userInput = textBox.Text.Trim();
                 var timeStamp = DateTime.Now.ToString("HH:mm");
+                var commentText = $"💬 [{timeStamp}] {_currentUserName}：{userInput}";
 
-                if (vm.Comments.Count == 1 && vm.Comments[0].Contains("系統提示"))
+                // 🌟 核心升級：將留言永久儲存進 SQL Server 實體表
+                using var db = new AppDbContext();
+                var newComment = new Comment
                 {
-                    vm.Comments.Clear();
-                }
+                    ProductId = vm.Id,
+                    Content = commentText,
+                    CreatedAt = DateTime.Now
+                };
+                db.Comments.Add(newComment);
+                db.SaveChanges();
 
-                vm.Comments.Add($"💬 [{timeStamp}] {_currentUserName}：{userInput}");
                 textBox.Text = "";
-                if (NotificationTextBlock != null) NotificationTextBlock.Text = $"💬 成功在貼文 [{vm.Name}] 內留下一則即時交易對話！";
+                if (NotificationTextBlock != null) NotificationTextBlock.Text = $"💬 成功留下一則永久交易對話！";
+
+                // 儲存成功後刷新，確保所有分頁的留言板即時同步最新資料庫內容
+                RefreshProducts();
             }
         }
     }
@@ -624,7 +625,8 @@ public partial class MainWindow : Window
 
         using var db = new AppDbContext();
 
-        var allRawProducts = db.Products.ToList();
+        
+        var allRawProducts = db.Products.Include(p => p.Comments).ToList();
         var filteredList = new List<Product>();
 
         foreach (var p in allRawProducts)
@@ -669,11 +671,26 @@ public partial class MainWindow : Window
                 StatusColor = p.IsSold ? "#E74C3C" : "#27AE60"
             };
 
-            if (_globalPhotoCache.TryGetValue(p.Id, out byte[]? photoData) && photoData != null)
+            // 🌟 核心優化：將 SQL Server 撈出的實體留言組裝進前端卡片
+            vm.Comments.Clear();
+            if (p.Comments != null && p.Comments.Count > 0)
+            {
+                // 依據留言時間排序輸出
+                foreach (var c in p.Comments.OrderBy(c => c.CreatedAt))
+                {
+                    vm.Comments.Add(c.Content);
+                }
+            }
+            else
+            {
+                vm.Comments.Add("💡 系統提示：目前此求購/物資暫無留言，快來問答互動吧！");
+            }
+
+            if (p.PhotoData != null && p.PhotoData.Length > 0)
             {
                 try
                 {
-                    using var ms = new MemoryStream(photoData);
+                    using var ms = new MemoryStream(p.PhotoData);
                     vm.CardBitmap = new Bitmap(ms);
                     vm.HasPhoto = true;
                 }
@@ -748,8 +765,14 @@ public partial class MainWindow : Window
         if (BellNotificationPanel == null || CloseBellPanelButton == null) return;
         BellNotificationPanel.IsVisible = true;
         CloseBellPanelButton.IsVisible = true;
+
         var dot = this.FindControl<Control>("NewNotificationDot");
         if (dot != null) dot.IsVisible = false;
+
+        if (MainWebsiteTabControl != null)
+        {
+            MainWebsiteTabControl.SelectedIndex = 2;
+        }
     }
 
     private void CloseBellPanelButton_Click(object? sender, RoutedEventArgs e)

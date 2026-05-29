@@ -302,7 +302,7 @@
 									<ListBox.ItemTemplate>
 										<DataTemplate>
 											<Border Background="White" Margin="0,0,0,16" Padding="24" CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1" BoxShadow="0 4 12 0 #08000000">
-												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto" ColumnDefinitions="*, Auto">
+												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" ColumnDefinitions="*, Auto">
 													<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
 														<Border Background="#4A00E0" CornerRadius="4" Padding="8,4">
 															<TextBlock Text="{Binding CampusSection}" FontSize="12" FontWeight="Bold" Foreground="White"/>
@@ -315,11 +315,25 @@
 														<TextBlock Text="狀態： " FontSize="13" Foreground="#718096"/>
 														<TextBlock Text="{Binding StatusText}" FontSize="13" FontWeight="Bold" Foreground="{Binding StatusColor}"/>
 													</StackPanel>
-													<TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Name}" FontSize="22" FontWeight="Black" Foreground="#2D3748" Margin="0,0,0,8"/>
-													<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+
+													<!-- 🌟 核心新增：在畢業專區卡片左側補上相片框架 -->
+													<Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="Auto, *" Margin="0,8">
+														<Border Grid.Column="0" Width="130" Height="130" Background="#EDF2F7" CornerRadius="8" Margin="0,0,20,0" ClipToBounds="True">
+															<Panel>
+																<Image Source="{Binding CardBitmap}" Stretch="UniformToFill"/>
+																<TextBlock Text="🖼️ 無商品照" IsVisible="{Binding !HasPhoto}" FontSize="12" Foreground="#A0AEC0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+															</Panel>
+														</Border>
+														<StackPanel Grid.Column="1" VerticalAlignment="Center">
+															<TextBlock Text="{Binding Name}" FontSize="22" FontWeight="Black" Foreground="#2D3748" Margin="0,0,0,8"/>
+														</StackPanel>
+													</Grid>
+
+													<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,8">
 														<TextBlock Text="$" FontSize="18" FontWeight="Bold" Foreground="#4A00E0" VerticalAlignment="Bottom" Margin="0,0,2,2"/>
 														<TextBlock Text="{Binding Price}" FontSize="28" FontWeight="Black" Foreground="#4A00E0"/>
 													</StackPanel>
+
 													<Border Grid.Row="2" Grid.ColumnSpan="2" Background="#F8FAFC" CornerRadius="6" Padding="18" Margin="0,8,0,15">
 														<StackPanel Spacing="5">
 															<TextBlock Text="📝 商品詳細描述：" FontSize="12" FontWeight="Bold" Foreground="#718096"/>
@@ -341,6 +355,28 @@
 															<TextBlock Text="📍 面交地點：" FontSize="13" Foreground="#718096"/>
 															<TextBlock Text="{Binding Location}" FontSize="13" FontWeight="Bold" Foreground="#C53030"/>
 														</StackPanel>
+													</Grid>
+
+													<!-- 🌟 核心新增：在畢業專區卡片底部開孔，完美對齊連動後台 SQL Server 留言對話艙 -->
+													<Grid Grid.Row="5" Grid.ColumnSpan="2" RowDefinitions="Auto, Auto" Margin="0,12,0,0">
+														<Button Grid.Row="0" Content="💬 點我展開/收起即時留言區" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#EDF2F7" Foreground="#4A00E0" FontSize="12" HorizontalAlignment="Left" Padding="8,4"/>
+														<Border Grid.Row="1" Background="#F7FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,6,0,0" IsVisible="{Binding IsCommentVisible}">
+															<StackPanel Spacing="6">
+																<TextBlock Text="💬 即時問答對話艙：" FontSize="12" FontWeight="Bold" Foreground="#4A5568"/>
+																<ItemsControl ItemsSource="{Binding Comments}">
+																	<ItemsControl.ItemTemplate>
+																		<DataTemplate>
+																			<TextBlock Text="{Binding}" FontSize="13" Foreground="#2D3748" Margin="5,2" TextWrapping="Wrap"/>
+																		</DataTemplate>
+																	</ItemsControl.ItemTemplate>
+																</ItemsControl>
+																<Grid ColumnDefinitions="*, 8, Auto, 8, Auto" Margin="0,4,0,0">
+																	<TextBox Grid.Column="0" Tag="{Binding}" Watermark="輸入校內提問或殺價對話..." FontSize="12" Height="30" VerticalContentAlignment="Center"/>
+																	<Button Grid.Column="2" Content="🚀 送出" Click="SubmitComment_Click" Background="#4A00E0" Foreground="White" FontSize="11" Padding="10,4"/>
+																	<Button Grid.Column="4" Content="❌ 收起留言" Click="ToggleCommentBox_Click" CommandParameter="{Binding}" Background="#718096" Foreground="White" FontSize="11" Padding="10,4"/>
+																</Grid>
+															</StackPanel>
+														</Border>
 													</Grid>
 												</Grid>
 											</Border>
